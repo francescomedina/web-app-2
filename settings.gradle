@@ -1,0 +1,5 @@
+include ':api'
+include ':catalog'
+include ':order'
+include ':eureka'
+include ':util'
