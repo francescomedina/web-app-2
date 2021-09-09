@@ -93,6 +93,7 @@ class OrderServiceImpl @Autowired constructor(
             throw InvalidInputException("Invalid orderId: $orderId")
         }
         LOG.info("Will get product info for id={}", orderId)
+
         return repository.findByOrderId(orderId)
             .switchIfEmpty(Mono.error(NotFoundException("No product found for orderId: $orderId")))
             .log(LOG.name, Level.FINE)

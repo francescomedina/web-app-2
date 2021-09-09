@@ -4,28 +4,17 @@ import org.springframework.http.HttpStatus
 import java.time.ZonedDateTime
 
 
-class HttpErrorInfo {
-    private val timestamp: ZonedDateTime?
-    private val path: String?
-    private val httpStatus: HttpStatus?
-    private val message: String?
+data class HttpErrorInfo(
+    private val httpStatus: HttpStatus? = null,
+    val path: String? = null,
+    val message: String? = null,
+    val timestamp: ZonedDateTime = ZonedDateTime.now(),
+){
 
-    constructor() {
-        timestamp = null
-        httpStatus = null
-        path = null
-        message = null
+    fun getError(): String? {
+        return httpStatus!!.reasonPhrase
     }
 
-    constructor(httpStatus: HttpStatus?, path: String?, message: String?) {
-        timestamp = ZonedDateTime.now()
-        this.httpStatus = httpStatus
-        this.path = path
-        this.message = message
-    }
 
-    val status: Int
-        get() = httpStatus!!.value()
-    val error: String
-        get() = httpStatus!!.reasonPhrase
+
 }

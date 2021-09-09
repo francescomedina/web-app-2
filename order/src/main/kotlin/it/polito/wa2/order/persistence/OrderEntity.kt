@@ -18,15 +18,6 @@ class OrderEntity {
     var buyer = 0
     var price = 0.0
 
-    constructor() {}
-    constructor(orderId: Int, status: String?, amount: Int, buyer: Int, price: Double) {
-        this.orderId = orderId
-        this.status = status
-        this.amount = amount
-        this.buyer = buyer
-        this.price = price
-    }
-
     override fun toString(): String {
         return String.format("ProductEntity: %s", orderId)
     }

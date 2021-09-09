@@ -37,7 +37,7 @@ class CatalogIntegration @Autowired constructor(
     private val streamBridge: StreamBridge
     private val publishEventScheduler: Scheduler
 
-    private val ORDER_SERVICE_URL = "http://order:8080"
+    private val ORDER_SERVICE_URL = "http://order"
     private val WALLET_SERVICE_URL = "http://wallet:8080"
     private val WAREHOUSE_SERVICE_URL = "http://warehouse:8080"
 
@@ -95,7 +95,7 @@ class CatalogIntegration @Autowired constructor(
 
     fun getErrorMessage(ex: WebClientResponseException): String? {
         return try {
-            mapper.readValue(ex.responseBodyAsString, HttpErrorInfo::class.java).error
+           mapper.readValue(ex.responseBodyAsString, HttpErrorInfo::class.java).getError()
         } catch (ioex: IOException) {
             ex.message
         }

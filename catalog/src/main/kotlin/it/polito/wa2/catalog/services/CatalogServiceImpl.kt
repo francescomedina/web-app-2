@@ -3,6 +3,7 @@ package it.polito.wa2.catalog.services
 
 import it.polito.wa2.api.composite.catalog.CatalogCompositeService
 import it.polito.wa2.api.core.order.Order
+import it.polito.wa2.api.exceptions.NotFoundException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -57,7 +58,7 @@ class CatalogServiceImpl @Autowired constructor(
 
     override fun getOrder(orderId: Int): Mono<Order?>? {
         val order = integration.getOrder(orderId)
-//            ?: throw NotFoundException("No product found for productId: $orderId")
+            ?: throw NotFoundException("No product found for productId: $orderId")
         return order
     }
 

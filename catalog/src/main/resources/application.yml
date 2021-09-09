@@ -115,6 +115,7 @@ app.eureka-server: eureka
 
 spring.cloud.stream.kafka.binder.brokers: kafka
 
+
 ---
 spring.config.activate.on-profile: streaming_partitioned
 

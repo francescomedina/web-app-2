@@ -22,6 +22,8 @@ dependencies {
     implementation(project(":util"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation ("org.springframework.cloud:spring-cloud-starter-gateway")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j")
     implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
     implementation("org.springdoc:springdoc-openapi-webflux-ui:1.5.9")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
