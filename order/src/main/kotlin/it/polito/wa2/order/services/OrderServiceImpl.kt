@@ -78,14 +78,13 @@ class OrderServiceImpl @Autowired constructor(
         }
         val entity: OrderEntity = body?.let { mapper.apiToEntity(it) }!!
 
-        if (body != null) {
-            return repository.save(entity)
-                .log(LOG.name, Level.FINE)
-                .onErrorMap(DuplicateKeyException::class.java) { ex -> InvalidInputException("Duplicate key, Product Id: " + body.orderId)
-                }
-                .mapNotNull { e -> mapper.entityToApi(e) }
-        }
-        return null
+        return repository.save(entity)
+            .log(LOG.name, Level.FINE)
+            .onErrorMap(DuplicateKeyException::class.java) { ex ->
+                InvalidInputException("Duplicate key, Product Id: " + body.orderId)
+            }
+            .mapNotNull { e -> mapper.entityToApi(e) }
+
     }
 
     override fun getOrder(orderId: Int): Mono<Order?>? {

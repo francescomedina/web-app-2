@@ -48,12 +48,12 @@ class CatalogApplication {
         return builder
             .routes()
             .route("order-route") { it ->
-                it.path(true, "/order1/**")
+                it.path(true, "/order-composite/**")
                     .filters { f->
                         f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/failure1")
                         }
-                        f.rewritePath("/order1", "/")
+                        f.rewritePath("/order-composite", "/")
 
                     }
 
