@@ -27,7 +27,7 @@ data class UserEntity(
     val createdDate: LocalDateTime = LocalDateTime.now(),
 
     // The user can perform or not some operation
-    val isEnable: Boolean = false,
+    var isEnable: Boolean = false,
     //TODO: Check other thing for registration
 
     ) {

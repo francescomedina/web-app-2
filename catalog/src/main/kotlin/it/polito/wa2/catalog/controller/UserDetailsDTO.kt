@@ -8,14 +8,14 @@ import org.springframework.security.core.userdetails.UserDetails
 
 // This class will expose information contained in the User entity to other parts of the system
 data class UserDetailsDTO(
-    private val _username: String,
-    private val _password: String,
-    private val _email: String,
+    private val _username: String = "",
+    private val _password: String = "",
+    private val _email: String = "",
     private val _roles: Set<Rolename>,
     private val accountNonExpired: Boolean = true, //TODO: Change this later
     private val accountNonLocked: Boolean = true,
     private val credentialsNonExpired: Boolean = true,
-    private val isEnable: Boolean,
+    private val isEnable: Boolean = false,
 ) : UserDetails {
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
         return _roles
@@ -61,6 +61,9 @@ data class UserDetailsDTO(
         return isEnable
     }
 
+    fun userCanAccess(): Boolean {
+        return isAccountNonExpired && isAccountNonLocked && isCredentialsNonExpired && isEnable
+    }
 
 }
 

@@ -1,11 +1,31 @@
-
-
 # MongoDB Configuration properties
 spring.data.mongodb:
-  host: localhost
+  host: localhost #this configuration will be overridden when deploy inside docker
   port: 27017
   database: user_db
   auto-index-creation: true
+
+# Spring MAIL configuration properties
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: progettomalnati@gmail.com
+    password: progetto2021
+    properties:
+      mail:
+        smtp.auth: true
+        smtp.starttls.enable: true
+        debug: true
+
+
+# JWT configuration
+application:
+  jwt:
+    jwtSecret: tNO+KhVrTj3B4q0+SEwz/NSvZq7y577jOjvY4uPgAR4=
+    jwtExpirationMs: 1000000
+    jwtHeader: Authorization
+    jwtHeaderStart: Bearer
 
 
 springdoc:
@@ -122,6 +142,8 @@ management.endpoints.web.exposure.include: "*"
 spring.config.activate.on-profile: docker
 
 server.port: 8080
+
+spring.data.mongodb.host: mongodb
 
 app.eureka-server: eureka
 

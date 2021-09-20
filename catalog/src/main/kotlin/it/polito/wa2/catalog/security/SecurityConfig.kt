@@ -24,17 +24,17 @@ class SecurityConfig {
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     // With this we can set where are our users stored and which user we have
-    @Bean
-    fun userDetailsService(encoder: PasswordEncoder): MapReactiveUserDetailsService? {
-        // TODO: Change this because is in-memory
-        val user: UserDetails = User.builder()
-            .username("user")
-            .password(encoder.encode("password"))
-            .roles("USER")
-            .build()
-
-        return MapReactiveUserDetailsService(user)
-    }
+//    @Bean
+//    fun userDetailsService(encoder: PasswordEncoder): MapReactiveUserDetailsService? {
+//        // TODO: Change this because is in-memory
+//        val user: UserDetails = User.builder()
+//            .username("user")
+//            .password(encoder.encode("password"))
+//            .roles("USER")
+//            .build()
+//
+//        return MapReactiveUserDetailsService(user)
+//    }
 
 
     // This is the configuration for the security chain
@@ -55,6 +55,7 @@ class SecurityConfig {
                 Mono.fromRunnable {
                     exchange.response.statusCode = HttpStatus.UNAUTHORIZED
                     exchange.response.headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                    //TODO: Search if we can show inside the response body the error message
                 }
             }
 

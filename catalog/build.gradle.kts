@@ -38,6 +38,9 @@ dependencies {
     // Mongo DB to store user information
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
 
+    // Use for send confirmation email to the user
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
