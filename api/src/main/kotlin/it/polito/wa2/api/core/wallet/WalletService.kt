@@ -14,7 +14,7 @@ interface WalletService {
      * @param walletId Id of the product
      * @return the product, if found, else null
      */
-    @GetMapping(value = ["/order/{orderId}"], produces = ["application/json"])
+    @GetMapping(value = ["/order/{walletId}"], produces = ["application/json"])
     fun getWallet(@PathVariable walletId: Int): Mono<Wallet?>?
 
     fun deleteWallet(orderId: Int): Mono<Void?>?

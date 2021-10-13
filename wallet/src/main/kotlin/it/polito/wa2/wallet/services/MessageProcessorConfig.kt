@@ -6,13 +6,17 @@ import it.polito.wa2.api.event.Event
 import it.polito.wa2.api.exceptions.EventProcessingException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
 import java.util.function.Consumer
 
-@Configuration
+@EnableAutoConfiguration
+@Component
 class MessageProcessorConfig @Autowired constructor(walletService: WalletService) {
-    private val productService: WalletService
+    private val walletService: WalletService
+
     @Bean
     fun messageProcessor(): Consumer<Event<Int?, Wallet?>> {
         return Consumer<Event<Int?, Wallet?>> { event: Event<Int?, Wallet?> ->
@@ -20,13 +24,13 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
             when (event.eventType) {
                 Event.Type.CREATE -> {
                     val product: Wallet = event.data!!
-                    LOG.info("Create product with ID: {}", product.getProductId())
-                    productService.createProduct(product).block()
+//                    LOG.info("Create product with ID: {}", product.getProductId())
+//                    productService.createProduct(product).block()
                 }
                 Event.Type.DELETE -> {
                     val productId: Int = event.key!!
-                    LOG.info("Delete recommendations with ProductID: {}", productId)
-                    productService.deleteProduct(productId).block()
+//                    LOG.info("Delete recommendations with ProductID: {}", productId)
+//                    productService.deleteProduct(productId).block()
                 }
                 else -> {
                     val errorMessage = "Incorrect event type: " + event.eventType
@@ -44,6 +48,6 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
     }
 
     init {
-        this.productService = walletService
+        this.walletService = walletService
     }
 }
