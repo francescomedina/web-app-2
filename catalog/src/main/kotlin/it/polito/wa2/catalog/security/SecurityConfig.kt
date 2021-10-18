@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder
 import org.springframework.security.config.web.server.ServerHttpSecurity
@@ -11,30 +12,20 @@ import org.springframework.security.core.userdetails.MapReactiveUserDetailsServi
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.factory.PasswordEncoderFactories
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.authentication.AuthenticationWebFilter
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository
 import reactor.core.publisher.Mono
 
-
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 @EnableWebFluxSecurity
 class SecurityConfig {
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
-
-    // With this we can set where are our users stored and which user we have
-//    @Bean
-//    fun userDetailsService(encoder: PasswordEncoder): MapReactiveUserDetailsService? {
-//        // TODO: Change this because is in-memory
-//        val user: UserDetails = User.builder()
-//            .username("user")
-//            .password(encoder.encode("password"))
-//            .roles("USER")
-//            .build()
-//
-//        return MapReactiveUserDetailsService(user)
-//    }
+    //It will provide the best encoding at the moment (we don't need to put a specific one that can became obsolete)
+    fun passwordEncoder(): PasswordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder()
 
 
     // This is the configuration for the security chain
@@ -62,8 +53,8 @@ class SecurityConfig {
             .and()
             .authorizeExchange()
 
-            // Here we will put the route that do not require authentication
-            .pathMatchers(HttpMethod.POST, "/login").permitAll()
+            // Here we will put the route with a specific permission
+            .pathMatchers("/auth/admin/**").hasAuthority("ADMIN")
             .pathMatchers("/auth/**").permitAll()
 
             // The other exchange (route) are authenticated
@@ -79,6 +70,10 @@ class SecurityConfig {
             .formLogin().disable()
             // TODO: Check if we need to disable too
             .csrf().disable()
+
+            // This is similar to "http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)"
+            // for Spring security reactive. See: https://github.com/spring-projects/spring-security/issues/6552#issuecomment-519398510
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
 
 
         return http.build()

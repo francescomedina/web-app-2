@@ -18,14 +18,12 @@ import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.withContext
 
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
-
-import reactor.core.publisher.Mono
-
 
 import java.sql.Timestamp
 import java.time.Instant
@@ -42,12 +40,19 @@ class UserDetailsServiceImpl(
     private val mailService: MailService
 ) : UserDetailsService {
 
-//    @PreAuthorize("hasAuthority('ADMIN')")
-//    fun setEnabled(username: String, isEnabled: Boolean){
-//        val user = userRepository.findByUsername(username)?: throw NotFoundException("UserDetails not found")
-//        user.isEnabled = isEnabled
-//        userRepository.save(user)
-//    }
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')") //TODO: This doesn't work
+    suspend fun setEnabled(username: String, isEnabled: Boolean) {
+        val user = userRepository.findByUsername(username).awaitSingleOrNull()
+
+        user?.let {
+            user.isEnable = isEnabled
+            userRepository.save(user).awaitSingle()
+
+            return
+        }
+
+        throw NotFoundException("UserDetails not found")
+    }
 
     /**
      * Create a user
@@ -114,7 +119,9 @@ class UserDetailsServiceImpl(
 
         user?.let {
             user.addRolename(rolename)
-            userRepository.save(user)
+            userRepository.save(user).awaitSingle()
+
+            return
         }
 
         throw NotFoundException("User not found")
@@ -126,7 +133,8 @@ class UserDetailsServiceImpl(
 
         user?.let {
             user.removeRolename(rolename)
-            userRepository.save(user)
+            userRepository.save(user).awaitSingle()
+            return
         }
 
         throw NotFoundException("User not found")
@@ -165,6 +173,22 @@ class UserDetailsServiceImpl(
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
     }
 
+    suspend fun updatePassword(username: String, password: String){
+        val user = userRepository.findByUsername(username).awaitSingleOrNull()
+
+        user?.let {
+
+            // Change user password and save it
+            user.password = password
+            userRepository.save(it).onErrorMap { error ->
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
+            }.awaitSingle()
+            return
+        }
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
+    }
+
+
     suspend fun getTokenInfo(token: String): EmailVerificationToken {
 
         val tokenInfo = tokenRepository.findByToken(token).awaitSingleOrNull()
@@ -179,6 +203,20 @@ class UserDetailsServiceImpl(
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "Token not found")
     }
+
+
+    // With this we can set where are our users stored and which user we have
+//    @Bean
+//    fun userDetailsService(encoder: PasswordEncoder): MapReactiveUserDetailsService? {
+//        // This is in-memory
+//        val user: UserDetails = User.builder()
+//            .username("user")
+//            .password(encoder.encode("password"))
+//            .roles("USER")
+//            .build()
+//
+//        return MapReactiveUserDetailsService(user) //TODO: Understand in in reactive it's better use this method
+
 
 }
 

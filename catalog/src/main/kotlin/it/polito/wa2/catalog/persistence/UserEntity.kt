@@ -16,7 +16,7 @@ data class UserEntity(
 
     @Indexed(unique = true)
     val username: String,
-    val password: String = "",
+    var password: String = "",
 
     @Indexed(unique = true, name = "unique-email")
     val email: String = "",
