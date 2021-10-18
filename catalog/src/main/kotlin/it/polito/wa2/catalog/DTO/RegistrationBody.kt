@@ -13,6 +13,7 @@ data class RegistrationBody(
 
     @field:NotNull(message = "You must provide an username")
     val username: String,
+
     val password: String,
     val confirmPassword: String,
 )

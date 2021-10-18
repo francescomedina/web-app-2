@@ -46,7 +46,6 @@ class SecurityConfig {
                 Mono.fromRunnable {
                     exchange.response.statusCode = HttpStatus.UNAUTHORIZED
                     exchange.response.headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
-                    //TODO: Search if we can show inside the response body the error message
                 }
             }
 
@@ -68,7 +67,7 @@ class SecurityConfig {
             // Disable thing for basic auth because we will use the JWT
             .httpBasic().disable()
             .formLogin().disable()
-            // TODO: Check if we need to disable too
+
             .csrf().disable()
 
             // This is similar to "http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)"

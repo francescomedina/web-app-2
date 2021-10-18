@@ -65,7 +65,6 @@ class JwtUtils(
 
     /**
      * It will generate the JWT Token with inside the user details
-     * FIXME: Inside lab3 the professor said that is takes a authentication: Authentication; i don't know how to get
      */
     fun generateJwtToken(user: UserDetails): String{
         val roles = user.authorities
@@ -106,7 +105,6 @@ class JwtUtils(
 
 
     fun getDetailsFromJwtToken (authToken: String): UserDetailsDTO {
-        //TODO: This can be factorize above
         val key = Keys.hmacShaKeyFor(secret.toByteArray())
         val claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(authToken).body
 

@@ -1,6 +1,6 @@
 package it.polito.wa2.catalog.controller
 
-import it.polito.wa2.catalog.DTO.RegistrationBody
+import it.polito.wa2.catalog.DTO.*
 import it.polito.wa2.catalog.persistence.UserEntity
 import it.polito.wa2.catalog.persistence.UserRepository
 import it.polito.wa2.catalog.security.JwtUtils
@@ -22,6 +22,7 @@ import java.security.Principal
 import java.util.function.Function
 import java.util.stream.Collectors
 import javax.validation.Valid
+import javax.validation.constraints.NotNull
 
 
 @RestController
@@ -39,6 +40,7 @@ class UserController(
     /**
      * Controller that handle the registration process
      * It will check if the password and confirmPassword are the same and then delegate the creation to the service above
+     * @return the user created or a bad request if some errors occurred
      */
     @PostMapping("/register")
     suspend fun register(@RequestBody @Valid data: Mono<RegistrationBody>): ResponseEntity<UserDetailsDTO> {
@@ -61,6 +63,7 @@ class UserController(
 
                     // Return a 201 with inside the user created
                     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser)
+
                 } catch (error: ErrorResponse) {
                     throw ResponseStatusException(error.status, error.errorMessage)
                 }
@@ -68,7 +71,7 @@ class UserController(
             }
             throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                "The confirmation password doesn't match with the password insert"
+                "The confirmation password and the password don't match"
             )
         }
 
@@ -76,6 +79,11 @@ class UserController(
     }
 
 
+    /**
+     * Controller that handle the update password procedure
+     * @param principal : user principal to get username
+     * @param data : with the old password and the new password
+     */
     @PostMapping("/updatePassword")
     suspend fun updatePassword(
         @AuthenticationPrincipal principal: Principal,
@@ -87,19 +95,20 @@ class UserController(
             if (body.password != body.confirmPassword) {
                 throw ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "The confirmation password doesn't match with the password insert"
+                    "The confirmation password and the password don't match"
                 )
             }
 
-            // Now that the two new password are equal, we will check if the old password is correct
+            // Now that the two new passwords are equal, we will check if the old password is correct
             try {
                 // Take user info from DB
                 val userInfo = userDetailsServiceImpl.getUserByUsername(principal.name)
 
                 userInfo?.let { user ->
-                    val prova = body.oldPassword
 
-                    if (encoder.matches(prova, user.password)) {
+                    if (encoder.matches(body.oldPassword, user.password)) {
+
+                        // The old password is the same we have inside the DB, so we can change it with the new one
                         userDetailsServiceImpl.updatePassword(
                             username = principal.name,
                             password = encoder.encode(body.password)
@@ -116,6 +125,7 @@ class UserController(
                 }
 
             } catch (error: ErrorResponse) {
+                // Some errors occurred, we return the errorMessage formatted inside updatePassword method
                 throw ResponseStatusException(error.status, error.errorMessage)
             }
         }
@@ -143,12 +153,6 @@ class UserController(
     }
 
 
-    @GetMapping("/me")
-    suspend fun me(@AuthenticationPrincipal principal: Principal): Profile {
-        // Do not publish the principal inside the response directly; expose only the information needed
-        return Profile(principal.name)
-    }
-
 
     @PostMapping("/login")
     suspend fun login(@RequestBody login: Login): Jwt {
@@ -157,20 +161,38 @@ class UserController(
         val user = users.getUserByUsername(login.username)
 
         user?.let {
-            // If the user is not null we will check if the password provided is the same of the password stored
+            // If the user is not null, we will check if the password provided is the same of the password stored
             if (encoder.matches(login.password, it.password)) {
-                // The password is valid, so we return the JWT
+                // The password is valid, now we check if the user has some limitation that do not allow him to enter
                 if (it.userCanAccess()) {
+                    // The user has all valid, so we generate the token
                     return Jwt(jwtUtils.generateJwtToken(it))
                 } else {
+                    // The user cannot log in due to some limitation in his account, we return an error explaining the problem
+                    val errorMessage = when {
+                        !it.isEnabled -> {
+                            // The user inserted a valid email and password, so we know its identity for sure
+                            // We send again another email to confirm the account because we suppose the link is expired
+                            userDetailsServiceImpl.sendToken(user)
+                            "Your account is not enabled. We are sending you another email to confirm"
+                        }
+                        !it.isAccountNonLocked -> "Your account is locked, contact the support center"
+                        !it.isAccountNonExpired -> "Your account expired, contact the support center"
+                        !it.isCredentialsNonExpired -> "Your credential is expired, change the password"
+                        else -> "Your account has some unknown problem, contact the support center"
+                    }
+
                     throw ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
-                        "Your account has some problem"
-                    ) //TODO: Better error handling
+                        errorMessage
+                    )
+
                 }
             }
         }
 
+        // If the password is not correct, or we do not find any user with that username,
+        // we return a generic error to prevent some attacks.
         throw ResponseStatusException(
             HttpStatus.UNAUTHORIZED,
             "The combination username and password is not correct"
@@ -212,8 +234,23 @@ class UserController(
         }
     }
 
+    @PostMapping("/admin/downgradeUser")
+    suspend fun downgradeUser(@RequestBody user: Profile): ResponseEntity<String> {
+        return try {
+            userDetailsServiceImpl.removeRole(user.username, Rolename.ADMIN)
+
+            ResponseEntity.status(HttpStatus.OK).body("User ${user.username} is not admin anymore")
+        } catch (e: Exception) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                e.message
+            )
+        }
+    }
+
     @GetMapping("/admin/{username}")
     suspend fun userInfo(@PathVariable username: String): UserDetailsDTO? {
+        // Only the admin can ask information about other users
         return userDetailsServiceImpl.getUserByUsername(username)
     }
 
@@ -221,22 +258,6 @@ class UserController(
 
 
 data class Jwt(val token: String)
-
-// This is the representation of what the user will send during the login phase
-data class Login(val username: String, val password: String)
-
-data class Profile(val username: String)
-
-data class EnableUser(
-    val username: String,
-    val enable: Boolean
-)
-
-data class ChangePasswordBody(
-    val oldPassword: String,
-    val password: String,
-    val confirmPassword: String
-)
 
 @ControllerAdvice
 class ValidationHandler {

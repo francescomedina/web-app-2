@@ -22,7 +22,7 @@ class SpringConfig(
     fun scheduleFixedDelayTask() {
 //Instant.now().toString();
 
-
+    //TODO: Mettere quando funziona la cancellazione
       // val prova = emailVerificationTokenRepository.findMarco("2022-12-02").block()
 
         println(

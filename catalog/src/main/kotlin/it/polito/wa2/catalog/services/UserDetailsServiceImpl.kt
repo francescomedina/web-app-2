@@ -1,33 +1,22 @@
 package it.polito.wa2.catalog.services
 
-import io.netty.util.internal.SystemPropertyUtil
-import it.polito.wa2.api.exceptions.InvalidInputException
 import it.polito.wa2.api.exceptions.NotFoundException
 import it.polito.wa2.catalog.controller.UserDetailsDTO
 import it.polito.wa2.catalog.controller.toUserDetailsDTO
+import it.polito.wa2.catalog.controller.toUserEntity
 import it.polito.wa2.catalog.persistence.EmailVerificationToken
 import it.polito.wa2.catalog.persistence.EmailVerificationTokenRepository
-import it.polito.wa2.catalog.persistence.UserEntity
 import it.polito.wa2.catalog.persistence.UserRepository
 import it.polito.wa2.catalog.security.Rolename
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.withContext
-
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
-
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
-
-import java.sql.Timestamp
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -41,6 +30,11 @@ class UserDetailsServiceImpl(
 ) : UserDetailsService {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')") //TODO: This doesn't work
+    /**
+     * It will enable/disable the user with such username
+     * @param username
+     * @param isEnabled : true (if we want to enable) false (if we want to disable)
+     */
     suspend fun setEnabled(username: String, isEnabled: Boolean) {
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
@@ -51,23 +45,17 @@ class UserDetailsServiceImpl(
             return
         }
 
-        throw NotFoundException("UserDetails not found")
+        throw NotFoundException("Username not found")
     }
 
     /**
-     * Create a user
+     * Create a user with customer role. This user will not be enabled yet.
+     * @return the userDetailsDTO of the user
+     * @throws ErrorResponse if the email or username already exist
      */
     suspend fun createCustomerUser(userDetailsDTO: UserDetailsDTO): UserDetailsDTO {
 
-        // Create the new user
-        val newUser = UserEntity(
-            username = userDetailsDTO.username,
-            password = userDetailsDTO.password,
-            email = userDetailsDTO.email,
-            roles = userDetailsDTO.roles,
-            createdDate = LocalDateTime.now(),
-            isEnable = false
-        )
+        val newUser = userDetailsDTO.toUserEntity()
 
         // Store the user inside the DB
         val savedUser = userRepository.save(newUser)
@@ -85,21 +73,32 @@ class UserDetailsServiceImpl(
                 }
             }.awaitSingle()
 
-
-        // Send confirmation email
-        val token = notificationService.createEmailVerificationToken(
-            Date.from(Instant.now().plus(15, ChronoUnit.MINUTES)), ///TODO to change into 5 minutes
-            userDetailsDTO.username
-        ).token
-
-        val endpoint = "http://localhost:7000/auth/registrationConfirm?token=$token"
-        mailService.sendMessage(userDetailsDTO.email, "Confirm Registration", endpoint)
+        // We will send the email with the verification token
+        sendToken(userDetailsDTO)
 
         return savedUser.toUserDetailsDTO()
     }
 
     /**
-     * Return UserDetails (not the entity User)
+     * Send the email to the user with the verification token inside in order to enable the user
+     * @param userDetailsDTO of the user to enable
+     */
+    suspend fun sendToken(userDetailsDTO: UserDetailsDTO) {
+        // Send confirmation email setting the expiration times to 45 minuted
+        val token = notificationService.createEmailVerificationToken(
+            Date.from(Instant.now().plus(45, ChronoUnit.MINUTES)),
+            userDetailsDTO.username
+        ).token
+
+        val endpoint = "http://localhost:7000/auth/registrationConfirm?token=$token" //TODO: Check if works with docker
+        mailService.sendMessage(userDetailsDTO.email, "Confirm Registration", endpoint)
+    }
+
+    /**
+     * Return UserDetails (not the entity User) of the user passed as parameter
+     * @param username
+     * @return UserDetails
+     * @throws UsernameNotFoundException if the username doesn't exist
      */
     override fun loadUserByUsername(username: String?): UserDetails {
 
@@ -110,15 +109,22 @@ class UserDetailsServiceImpl(
                 return user.toUserDetailsDTO()
             }
         }
-        throw UsernameNotFoundException(String.format("No user found with username '%s'.", username))
+        throw UsernameNotFoundException("No user found with username $username")
     }
 
-    suspend fun addRole(username: String, rolename: Rolename) {
+
+    /**
+     * It will add the roleName to the user with such username
+     * @param username
+     * @param roleName
+     * @throws NotFoundException if the username doesn't exist
+     */
+    suspend fun addRole(username: String, roleName: Rolename) {
 
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
         user?.let {
-            user.addRolename(rolename)
+            user.addRolename(roleName)
             userRepository.save(user).awaitSingle()
 
             return
@@ -127,21 +133,30 @@ class UserDetailsServiceImpl(
         throw NotFoundException("User not found")
     }
 
-    suspend fun removeRole(username: String, rolename: Rolename) {
+    /**
+     * It will remove the roleName to the user with such username
+     * @param username
+     * @param roleName
+     * @throws NotFoundException if the username doesn't exist
+     */
+    suspend fun removeRole(username: String, roleName: Rolename) {
 
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
         user?.let {
-            user.removeRolename(rolename)
+            user.removeRolename(roleName)
             userRepository.save(user).awaitSingle()
             return
         }
 
         throw NotFoundException("User not found")
-
     }
 
-    // TODO: This is not similar to loadUserByUsername?
+    /**
+     * Retrieve the user information and convert to a DTO
+     * @param username
+     * @return UserDetailsDTO of that username
+     */
     suspend fun getUserByUsername(username: String): UserDetailsDTO? {
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
@@ -173,51 +188,51 @@ class UserDetailsServiceImpl(
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
     }
 
-    suspend fun updatePassword(username: String, password: String){
+    /**
+     * It will take the username and the password (encoded) and will change the password of that username
+     * @param username
+     * @param password
+     * @throws ErrorResponse if some error occurred while saving or user doesn't exist
+     */
+    suspend fun updatePassword(username: String, password: String) {
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
         user?.let {
-
             // Change user password and save it
             user.password = password
+
             userRepository.save(it).onErrorMap { error ->
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
             }.awaitSingle()
             return
         }
+
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
     }
 
-
+    /**
+     * It will enable the user if the token is not expired
+     * @return all the information about that token (if not expired)
+     * @throws ErrorResponse if the token is expired
+     */
     suspend fun getTokenInfo(token: String): EmailVerificationToken {
-
+        // Get token info from DB
         val tokenInfo = tokenRepository.findByToken(token).awaitSingleOrNull()
 
         tokenInfo?.let {
             val now = Date.from(Instant.now())
             if (!now.before(it.expiryDate)) {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Token expired")
+                // Token date is before now, so the token is expired
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "This token expired, login again to get another one via email")
             }
             return it
         }
 
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "Token not found")
+        // If we are here, we didn't found such a token
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "Token not found. If you are sure the token is correct, login again to generate a new one")
     }
-
-
-    // With this we can set where are our users stored and which user we have
-//    @Bean
-//    fun userDetailsService(encoder: PasswordEncoder): MapReactiveUserDetailsService? {
-//        // This is in-memory
-//        val user: UserDetails = User.builder()
-//            .username("user")
-//            .password(encoder.encode("password"))
-//            .roles("USER")
-//            .build()
-//
-//        return MapReactiveUserDetailsService(user) //TODO: Understand in in reactive it's better use this method
-
 
 }
 
+// Exception class used for send to the controller the correct message and status to generate an appropriate http message
 data class ErrorResponse(val status: HttpStatus, val errorMessage: String) : Throwable()

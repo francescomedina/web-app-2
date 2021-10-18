@@ -32,7 +32,7 @@ class NotificationServiceImpl(var emailVerificationTokenRepository: EmailVerific
             return it
         }
 
-        throw RuntimeException("Errore notification service")
+        throw RuntimeException("Error notification service")
 
     }
 }

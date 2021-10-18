@@ -5,6 +5,7 @@ import it.polito.wa2.catalog.security.Rolename
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import java.time.LocalDateTime
 
 // This class will expose information contained in the User entity to other parts of the system
 data class UserDetailsDTO(
@@ -12,11 +13,12 @@ data class UserDetailsDTO(
     private val _password: String = "",
     private val _email: String = "",
     private val _roles: Set<Rolename>,
-    private val accountNonExpired: Boolean = true, //TODO: Change this later
+    private val accountNonExpired: Boolean = true,
     private val accountNonLocked: Boolean = true,
     private val credentialsNonExpired: Boolean = true,
     private val isEnable: Boolean = false,
 ) : UserDetails {
+
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
         return _roles
             .map { SimpleGrantedAuthority(it.name) }
@@ -35,7 +37,7 @@ data class UserDetailsDTO(
 
     val roles: String
         get() {
-            var output: String = ""
+            var output = ""
             _roles.forEach {
                 if (output == "")
                     output = "$it"
@@ -68,6 +70,8 @@ data class UserDetailsDTO(
 }
 
 
+// USER ENTITY --> USER DETAILS DTO
+// Convert a user entity into a user DTO. The method created has the name of toUserDetailsDTO
 fun UserEntity.toUserDetailsDTO() = UserDetailsDTO(
 
     _username = username,
@@ -79,4 +83,14 @@ fun UserEntity.toUserDetailsDTO() = UserDetailsDTO(
     accountNonLocked = true,
     credentialsNonExpired = true
 
+)
+
+// USER DTO --> USER ENTITY
+fun UserDetailsDTO.toUserEntity() = UserEntity(
+    username = username,
+    password = password,
+    email = email,
+    roles = roles,
+    createdDate = LocalDateTime.now(),
+    isEnable = isEnabled
 )
