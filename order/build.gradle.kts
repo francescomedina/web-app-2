@@ -3,9 +3,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("org.springframework.boot") version "2.5.4"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
+    kotlin("kapt") version "1.5.30"
     kotlin("jvm") version "1.5.21"
     kotlin("plugin.spring") version "1.5.21"
-    kotlin("kapt") version "1.5.30"
 }
 
 group = "it.polito.wa2"

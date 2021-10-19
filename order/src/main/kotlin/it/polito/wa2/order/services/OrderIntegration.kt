@@ -17,6 +17,7 @@ import org.springframework.messaging.Message
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
@@ -24,6 +25,7 @@ import reactor.core.scheduler.Scheduler
 import java.io.IOException
 import java.util.logging.Level
 
+@RestController
 @EnableAutoConfiguration
 @Component
 class OrderIntegration @Autowired constructor(
@@ -51,7 +53,7 @@ class OrderIntegration @Autowired constructor(
     override fun createOrder(body: Order?): Mono<Order?>? {
         return Mono.fromCallable<Order> {
             if (body != null) {
-                sendMessage("catalog-out-0", Event(Event.Type.CREATE, body.orderId, body))
+                sendMessage("wallet-out-0", Event(Event.Type.CREATE, body.orderId, body))
             }
             body
         }.subscribeOn(publishEventScheduler)

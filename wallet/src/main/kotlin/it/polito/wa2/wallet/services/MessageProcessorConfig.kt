@@ -44,7 +44,7 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(MessageProcessorConfig::class.java)
+        val LOG = LoggerFactory.getLogger(MessageProcessorConfig::class.java)
     }
 
     init {

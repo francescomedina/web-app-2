@@ -26,6 +26,31 @@ services:
       kafka:
         condition: service_started
 
+  wallet:
+    build: ./wallet
+    mem_limit: 512m
+    ports:
+      - "5003:5003"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5003
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  wallet-p1:
+    build: ./wallet
+    mem_limit: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
   catalog:
     build: ./catalog
     mem_limit: 512m

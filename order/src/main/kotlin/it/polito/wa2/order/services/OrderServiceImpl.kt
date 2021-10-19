@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 import java.util.logging.Level
 
-@RestController
+//@RestController
 @EnableAutoConfiguration
 class OrderServiceImpl @Autowired constructor(
     repository: OrderRepository,
