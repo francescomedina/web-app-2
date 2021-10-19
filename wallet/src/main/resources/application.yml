@@ -2,7 +2,7 @@
 server.port: 7001
 server.error.include-message: always
 
-spring.application.name: order
+spring.application.name: wallet
 
 app.eureka-server: localhost
 
@@ -19,7 +19,7 @@ eureka:
 spring.data.mongodb:
   host: localhost
   port: 27017
-  database: order-db
+  database: wallet-db
 
 spring.cloud.function.definition: messageProcessor
 
@@ -27,7 +27,7 @@ spring.cloud.stream:
   defaultBinder: kafka
   default.contentType: application/json
   bindings.messageProcessor-in-0:
-    destination: order
+    destination: wallet
     group: productsGroup
 
 spring.cloud.stream.bindings.messageProcessor-in-0.consumer:

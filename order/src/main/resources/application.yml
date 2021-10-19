@@ -19,12 +19,12 @@ spring.cloud.stream:
   defaultBinder: kafka
   default.contentType: application/json
   bindings:
-    catalog-out-0:
-      destination: catalog
+    wallet-out-0:
+      destination: wallet
       producer:
         required-groups: auditGroup
-    order-out-0:
-      destination: order
+    warehouse-out-0:
+      destination: warehouse
       producer:
         required-groups: auditGroup
 
