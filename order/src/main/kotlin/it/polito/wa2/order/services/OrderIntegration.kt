@@ -53,7 +53,7 @@ class OrderIntegration @Autowired constructor(
     override fun createOrder(body: Order?): Mono<Order?>? {
         return Mono.fromCallable<Order> {
             if (body != null) {
-                sendMessage("wallet-out-0", Event(Event.Type.CREATE, body.orderId, body))
+                sendMessage("warehouse-out-0", Event(Event.Type.CREATE, body.orderId, body))
             }
             body
         }.subscribeOn(publishEventScheduler)

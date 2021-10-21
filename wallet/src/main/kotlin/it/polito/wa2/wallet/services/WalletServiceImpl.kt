@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import reactor.core.publisher.toMono
 
 @RestController
 @EnableAutoConfiguration
@@ -96,7 +97,8 @@ class WalletServiceImpl @Autowired constructor(
 //    }
 
     override fun createWallet(body: Wallet?): Mono<Wallet?>? {
-        TODO("Not yet implemented")
+//        val wallet = Wallet()
+        return Mono.just(body!!)
     }
 
     override fun getWallet(walletId: Int): Mono<Wallet?>? {

@@ -1,31 +1,30 @@
-package it.polito.wa2.wallet.services
+package it.polito.wa2.warehouse.services
 
-import it.polito.wa2.api.core.wallet.Wallet
-import it.polito.wa2.api.core.wallet.WalletService
+import it.polito.wa2.api.core.warehouse.Warehouse
+import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
 import it.polito.wa2.api.exceptions.EventProcessingException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 import java.util.function.Consumer
 
 @EnableAutoConfiguration
 @Component
-class MessageProcessorConfig @Autowired constructor(walletService: WalletService) {
-    private val walletService: WalletService
+class MessageProcessorConfig @Autowired constructor(warehouseService: WarehouseService) {
+    private val warehouseService: WarehouseService
 
     @Bean
-    fun messageProcessor(): Consumer<Event<Int?, Wallet?>> {
-        return Consumer<Event<Int?, Wallet?>> { event: Event<Int?, Wallet?> ->
+    fun messageProcessor(): Consumer<Event<Int?, Warehouse?>> {
+        return Consumer<Event<Int?, Warehouse?>> { event: Event<Int?, Warehouse?> ->
             LOG.info("Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
                 Event.Type.CREATE -> {
-                    val wallet: Wallet = event.data!!
-                    LOG.info("Create wallet with ID: {}", wallet.orderId)
-                    walletService.createWallet(wallet)!!.block()
+                    val warehouse: Warehouse = event.data!!
+                    LOG.info("Create warehouse with ID: {}", warehouse.orderId)
+                    warehouseService.createWarehouse(warehouse)!!.block()
                 }
                 Event.Type.DELETE -> {
                     val productId: Int = event.key!!
@@ -48,6 +47,6 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
     }
 
     init {
-        this.walletService = walletService
+        this.warehouseService = warehouseService
     }
 }
