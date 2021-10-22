@@ -22,9 +22,9 @@ class NotificationServiceImpl(var emailVerificationTokenRepository: EmailVerific
     override suspend fun createEmailVerificationToken(expiryDate: Date, username: String): EmailVerificationToken {
 
         val emailVerificationToken = EmailVerificationToken(
-            expiryDate,
-            UUID.randomUUID().toString(),
-            username
+            expiryDate = expiryDate,
+            token = UUID.randomUUID().toString(),
+            username = username
         )
 
         val notificationService = emailVerificationTokenRepository.save(emailVerificationToken).awaitSingleOrNull()

@@ -1,13 +1,15 @@
 package it.polito.wa2.catalog.persistence
 
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.bson.types.ObjectId
 import org.springframework.context.annotation.Configuration
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
 
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
-import java.text.SimpleDateFormat
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.time.Instant
 import java.util.*
 
@@ -20,14 +22,21 @@ class SpringConfig(
 
     @Scheduled(fixedDelay = 60000)
     fun scheduleFixedDelayTask() {
-//Instant.now().toString();
+        println("----------------------------------------------------")
+        println("Fixed task executing")
+        val nowInMillis = Calendar.getInstance().timeInMillis
 
-    //TODO: Mettere quando funziona la cancellazione
-      // val prova = emailVerificationTokenRepository.findMarco("2022-12-02").block()
+        val idToEliminate = emailVerificationTokenRepository.findAllByExpiryDateBefore(Date(nowInMillis)).collectList().block()
 
-        println(
-            //"Fixed delay task - " + Date(System.currentTimeMillis())
-        )
+        idToEliminate?.forEach {
+            println(
+                "Fixed delay task to eliminate token expired -  ${it.id}  "
+            )
+            emailVerificationTokenRepository.deleteById(it.id.toString()).block()
+        }
+        println("----------------------------------------------------")
+
     }
+
 
 }
