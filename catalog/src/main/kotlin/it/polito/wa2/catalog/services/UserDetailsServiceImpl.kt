@@ -10,6 +10,7 @@ import it.polito.wa2.catalog.persistence.UserRepository
 import it.polito.wa2.catalog.security.Rolename
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.userdetails.UserDetails
@@ -28,6 +29,12 @@ class UserDetailsServiceImpl(
     private val notificationService: NotificationService,
     private val mailService: MailService
 ) : UserDetailsService {
+
+    @Value("\${app.eureka-server}")
+    val host: String? = null
+    @Value("\${server.port}")
+    val port: Int? = 0
+
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')") //TODO: This doesn't work
     /**
@@ -90,7 +97,8 @@ class UserDetailsServiceImpl(
             userDetailsDTO.username
         ).token
 
-        val endpoint = "http://localhost:7000/auth/registrationConfirm?token=$token" //TODO: Check if works with docker
+        //TODO: I didn't understand if putting localhost is correct or not.
+        val endpoint = "http://localhost:$port/auth/registrationConfirm?token=$token"
         mailService.sendMessage(userDetailsDTO.email, "Confirm Registration", endpoint)
     }
 
