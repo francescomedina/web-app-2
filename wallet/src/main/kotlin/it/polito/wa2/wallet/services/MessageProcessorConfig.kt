@@ -1,5 +1,6 @@
 package it.polito.wa2.wallet.services
 
+import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.wallet.Wallet
 import it.polito.wa2.api.core.wallet.WalletService
 import it.polito.wa2.api.event.Event
@@ -18,16 +19,16 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
     private val walletService: WalletService
 
     @Bean
-    fun messageProcessor(): Consumer<Event<Int?, Wallet?>> {
-        return Consumer<Event<Int?, Wallet?>> { event: Event<Int?, Wallet?> ->
+    fun messageProcessor(): Consumer<Event<Int?, Order?>> {
+        return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
             LOG.info("Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
-                Event.Type.CREATE -> {
-                    val wallet: Wallet = event.data!!
-                    LOG.info("Create wallet with ID: {}", wallet.orderId)
-                    walletService.createWallet(wallet)!!.block()
+                Event.Type.QUANTITY_AVAILABLE -> {
+                    val order: Order = event.data!!
+                    LOG.info("Create wallet with ID: {}", order.orderId)
+                    walletService.processPayment(order)!!.block()
                 }
-                Event.Type.DELETE -> {
+                Event.Type.ROLLBACK_PAYMENT -> {
                     val productId: Int = event.key!!
 //                    LOG.info("Delete recommendations with ProductID: {}", productId)
 //                    productService.deleteProduct(productId).block()

@@ -1,5 +1,6 @@
 package it.polito.wa2.warehouse.services
 
+import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.warehouse.Warehouse
 import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
@@ -17,16 +18,21 @@ class MessageProcessorConfig @Autowired constructor(warehouseService: WarehouseS
     private val warehouseService: WarehouseService
 
     @Bean
-    fun messageProcessor(): Consumer<Event<Int?, Warehouse?>> {
-        return Consumer<Event<Int?, Warehouse?>> { event: Event<Int?, Warehouse?> ->
+    fun messageProcessor(): Consumer<Event<Int?, Order?>> {
+        return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
             LOG.info("Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
-                Event.Type.CREATE -> {
-                    val warehouse: Warehouse = event.data!!
-                    LOG.info("Create warehouse with ID: {}", warehouse.orderId)
-                    warehouseService.createWarehouse(warehouse)!!.block()
+                Event.Type.ORDER_CREATED -> {
+                    val order: Order = event.data!!
+                    LOG.info("Check if {} items (productId: {}) are available in warehouse : {}", order.amount, order.orderId)
+                    warehouseService.checkAvailability(order)!!.block()
                 }
-                Event.Type.DELETE -> {
+                Event.Type.CREDIT_RESERVED -> {
+                    val order: Order = event.data!!
+                    LOG.info("Create warehouse with ID: {}", order.orderId)
+                    warehouseService.decrementQuantity(order)!!.block()
+                }
+                Event.Type.ROLLBACK_QUANTITY -> {
                     val productId: Int = event.key!!
 //                    LOG.info("Delete recommendations with ProductID: {}", productId)
 //                    productService.deleteProduct(productId).block()

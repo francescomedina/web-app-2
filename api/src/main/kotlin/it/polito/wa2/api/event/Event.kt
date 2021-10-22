@@ -7,7 +7,15 @@ import java.time.ZonedDateTime
 
 class Event<K, T> {
     enum class Type {
-        CREATE, DELETE
+        ORDER_CREATED,
+        ORDER_CANCELLED,
+        CREDIT_RESERVED,
+        CREDIT_UNAVAILABLE,
+        QUANTITY_AVAILABLE,
+        QUANTITY_DECREASED,
+        QUANTITY_UNAVAILABLE,
+        ROLLBACK_PAYMENT,
+        ROLLBACK_QUANTITY,
     }
 
     val eventType: Type?

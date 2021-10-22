@@ -53,7 +53,7 @@ class OrderIntegration @Autowired constructor(
     override fun createOrder(body: Order?): Mono<Order?>? {
         return Mono.fromCallable<Order> {
             if (body != null) {
-                sendMessage("warehouse-out-0", Event(Event.Type.CREATE, body.orderId, body))
+                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
             }
             body
         }.subscribeOn(publishEventScheduler)
@@ -73,7 +73,7 @@ class OrderIntegration @Autowired constructor(
     }
 
     override fun deleteOrder(orderId: Int): Mono<Void?>? {
-        return Mono.fromRunnable<Any> { sendMessage("catalog-out-0", Event(Event.Type.DELETE, orderId, null)) }
+        return Mono.fromRunnable<Any> { sendMessage("catalog-out-0", Event(Event.Type.ORDER_CANCELLED, orderId, null)) }
             .subscribeOn(publishEventScheduler).then()
     }
 

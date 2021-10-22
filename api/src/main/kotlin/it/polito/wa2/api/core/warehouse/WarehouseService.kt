@@ -1,5 +1,6 @@
 package it.polito.wa2.api.core.warehouse
 
+import it.polito.wa2.api.core.order.Order
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import reactor.core.publisher.Mono
@@ -16,6 +17,10 @@ interface WarehouseService {
      */
     @GetMapping(value = ["/order/{warehouseId}"], produces = ["application/json"])
     fun getWarehouse(@PathVariable warehouseId: Int): Mono<Warehouse?>?
+
+    fun checkAvailability(order: Order?): Mono<Order?>?
+
+    fun decrementQuantity(order: Order?): Mono<Order?>?
 
     fun deleteWarehouse(orderId: Int): Mono<Void?>?
 }

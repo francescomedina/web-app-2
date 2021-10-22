@@ -1,5 +1,6 @@
 package it.polito.wa2.warehouse.services
 
+import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.warehouse.Warehouse
 import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
@@ -39,10 +40,41 @@ class WarehouseServiceImpl @Autowired constructor(
         this.publishEventScheduler = publishEventScheduler
     }
 
+    override fun checkAvailability(order: Order?): Mono<Order?>?{
+        /// TODO: check availability
+        val available = true
+        if(available){
+            return Mono.fromCallable<Order> {
+                sendMessage("wallet-out-0", Event(Event.Type.QUANTITY_AVAILABLE, order!!.orderId, order))
+                order
+            }.subscribeOn(publishEventScheduler)
+        }
+        return Mono.fromCallable<Order> {
+            sendMessage("order-out-0", Event(Event.Type.QUANTITY_UNAVAILABLE, order!!.orderId, order))
+            order
+        }.subscribeOn(publishEventScheduler)
+    }
+
+    override fun decrementQuantity(order: Order?): Mono<Order?>? {
+        /// TODO: decrement the product quantity
+        val decremented = true
+        if(decremented){
+            return Mono.fromCallable<Order> {
+                sendMessage("order-out-0", Event(Event.Type.QUANTITY_DECREASED, order!!.orderId, order))
+                order
+            }.subscribeOn(publishEventScheduler)
+        }
+        // product is no more available on the warehouse or service fails
+        return Mono.fromCallable<Order> {
+            sendMessage("wallet-out-0", Event(Event.Type.ROLLBACK_PAYMENT, order!!.orderId, order))
+            order
+        }.subscribeOn(publishEventScheduler)
+    }
+
     override fun createWarehouse(body: Warehouse?): Mono<Warehouse?>? {
         return Mono.fromCallable<Warehouse> {
             if (body != null) {
-                sendMessage("order-out-0", Event(Event.Type.DELETE, body.orderId, body))
+                sendMessage("order-out-0", Event(Event.Type.QUANTITY_DECREASED, body.orderId, body))
             }
             body
         }.subscribeOn(publishEventScheduler)

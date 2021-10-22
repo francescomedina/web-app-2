@@ -21,12 +21,12 @@ class MessageProcessorConfig @Autowired constructor(orderService: OrderService) 
         return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
             LOG.info("Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
-                Event.Type.CREATE -> {
+                Event.Type.QUANTITY_UNAVAILABLE -> {
                     val order: Order = event.data!!
                     LOG.info("Create order with ID: {}", order.orderId)
                     orderService.createOrder(order)!!.block()
                 }
-                Event.Type.DELETE -> {
+                Event.Type.CREDIT_UNAVAILABLE -> {
                     val productId: Int = event.key!!
 //                    LOG.info("Delete recommendations with ProductID: {}", productId)
 //                    productService.deleteProduct(productId).block()
