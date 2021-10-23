@@ -21,7 +21,7 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
     @Bean
     fun messageProcessor(): Consumer<Event<Int?, Order?>> {
         return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
-            LOG.info("Process message created at {}...", event.eventCreatedAt)
+            LOG.info("WALLET SERVICE: Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
                 Event.Type.QUANTITY_AVAILABLE -> {
                     val order: Order = event.data!!

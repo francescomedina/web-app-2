@@ -19,7 +19,7 @@ class MessageProcessorConfig @Autowired constructor(orderService: OrderService) 
     @Bean
     fun messageProcessor(): Consumer<Event<Int?, Order?>> {
         return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
-            LOG.info("Process message created at {}...", event.eventCreatedAt)
+            LOG.info("ORDER SERVICE: Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
                 Event.Type.QUANTITY_DECREASED -> {
                     val order: Order = event.data!!
