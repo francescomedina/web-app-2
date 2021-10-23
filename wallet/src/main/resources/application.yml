@@ -27,10 +27,10 @@ spring.cloud.stream:
   defaultBinder: kafka
   default.contentType: application/json
   bindings:
-    order-out-0:
-      destination: order
-      producer:
-        required-groups: auditGroup
+#    order-out-0:
+#      destination: order
+#      producer:
+#        required-groups: auditGroup
     warehouse-out-0:
       destination: warehouse
       producer:
@@ -77,30 +77,30 @@ spring.cloud.stream:
 ---
 spring.config.activate.on-profile: streaming_partitioned
 
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        partitioned: true
-        instanceCount: 2
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        partitioned: true
+#        instanceCount: 2
 
 ---
 spring.config.activate.on-profile: streaming_instance_0
 
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 0
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        instanceIndex: 0
 
 ---
 spring.config.activate.on-profile: streaming_instance_1
-
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 1
+#
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        instanceIndex: 1
 
 ---
 spring.config.activate.on-profile: kafka

@@ -48,6 +48,27 @@ class MessageProcessorConfig @Autowired constructor(warehouseService: WarehouseS
         }
     }
 
+//    @Bean
+//    fun warehouseProcessor(): Consumer<Event<Int?, Order?>> {
+//        return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
+//            LOG.info("WAREHOUSE SERVICE: Process message created at {}...", event.eventCreatedAt)
+//            when (event.eventType) {
+//                Event.Type.CREDIT_RESERVED -> {
+//                    val order: Order = event.data!!
+//                    LOG.info("Decrease the products in the warehouse by the quantity of each product in the order with ID: {}", order.orderId)
+//                    warehouseService.decrementQuantity(order)!!.block()
+//                }
+//                else -> {
+//                    val errorMessage = "Incorrect event type: " + event.eventType
+//                        .toString() + ", expected a CREATE or DELETE event"
+//                    LOG.warn(errorMessage)
+//                    throw EventProcessingException(errorMessage)
+//                }
+//            }
+//            LOG.info("Message processing done!")
+//        }
+//    }
+
     companion object {
         val LOG = LoggerFactory.getLogger(MessageProcessorConfig::class.java)
     }

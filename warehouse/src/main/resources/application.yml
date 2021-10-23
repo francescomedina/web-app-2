@@ -43,6 +43,14 @@ spring.cloud.stream:
         backOffInitialInterval: 500
         backOffMaxInterval: 1000
         backOffMultiplier: 2.0
+#    warehouseProcessor-in-0:
+#      destination: warehouse-1
+#      group: walletGroup
+#      consumer:
+#        maxAttempts: 3
+#        backOffInitialInterval: 500
+#        backOffMaxInterval: 1000
+#        backOffMultiplier: 2.0
   kafka:
     binder:
       brokers: 127.0.0.1
@@ -51,6 +59,9 @@ spring.cloud.stream:
       messageProcessor-in-0:
         consumer:
           enableDlq: true
+#      warehouseProcessor-in-0:
+#        consumer:
+#          enableDlq: true
 
 logging:
   level:
@@ -77,30 +88,40 @@ spring.cloud.stream:
 ---
 spring.config.activate.on-profile: streaming_partitioned
 
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        partitioned: true
-        instanceCount: 2
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        partitioned: true
+#        instanceCount: 2
+#    warehouseProcessor-in-0:
+#      consumer:
+#        partitioned: true
+#        instanceCount: 2
 
 ---
 spring.config.activate.on-profile: streaming_instance_0
 
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 0
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        instanceIndex: 0
+#    warehouseProcessor-in-0:
+#      consumer:
+#        instanceIndex: 0
 
 ---
 spring.config.activate.on-profile: streaming_instance_1
 
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 1
+#spring.cloud.stream:
+#  bindings:
+#    messageProcessor-in-0:
+#      consumer:
+#        instanceIndex: 1
+#    warehouseProcessor-in-0:
+#      consumer:
+#        instanceIndex: 1
 
 ---
 spring.config.activate.on-profile: kafka

@@ -6,3 +6,9 @@ paste include ':module' for each moduel you create and sync on the left gradle p
 - To create other modules just click new module from the root path
 - On the gradle panel: if all modules Builds are successfully precessed, 
 the module will be added on the gradle tree, If the new module is not under the root node (web-app-2) just UNLINK the service outside.
+
+
+- TODO: quando c'è un errore nei topic, la prossima chiamata che scatenerà un evento non funziona (non triggera e non viene gestita). CORREGGERLA
+- SOLO qunado faccio la purge dei containers e immagini funziona
+-Occhio al cambio scheda
+- Occhio al timeout del singolo topic -> MOTIVO
