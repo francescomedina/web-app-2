@@ -19,5 +19,7 @@ interface OrderService {
     @GetMapping(value = ["/order/{orderId}"], produces = ["application/json"])
     fun getOrder(@PathVariable orderId: Int): Mono<Order?>?
 
+    fun updateStatus(order: Order, status: String)
+
     fun deleteOrder(orderId: Int): Mono<Void?>?
 }

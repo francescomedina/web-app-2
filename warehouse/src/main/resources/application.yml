@@ -37,7 +37,7 @@ spring.cloud.stream:
         required-groups: auditGroup
     messageProcessor-in-0:
       destination: warehouse
-      group: productsGroup
+      group: warehouseGroup
       consumer:
         maxAttempts: 3
         backOffInitialInterval: 500

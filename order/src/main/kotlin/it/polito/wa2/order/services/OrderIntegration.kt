@@ -72,6 +72,11 @@ class OrderIntegration @Autowired constructor(
             ){ ex: WebClientResponseException -> handleException(ex) }
     }
 
+    override fun updateStatus(order: Order, status: String) {
+        /// TODO update order status
+        return
+    }
+
     override fun deleteOrder(orderId: Int): Mono<Void?>? {
         return Mono.fromRunnable<Any> { sendMessage("catalog-out-0", Event(Event.Type.ORDER_CANCELLED, orderId, null)) }
             .subscribeOn(publishEventScheduler).then()

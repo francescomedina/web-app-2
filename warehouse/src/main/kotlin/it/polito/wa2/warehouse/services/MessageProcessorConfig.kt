@@ -29,7 +29,7 @@ class MessageProcessorConfig @Autowired constructor(warehouseService: WarehouseS
                 }
                 Event.Type.CREDIT_RESERVED -> {
                     val order: Order = event.data!!
-                    LOG.info("Create warehouse with ID: {}", order.orderId)
+                    LOG.info("Decrease the products in the warehouse by the quantity of each product in the order with ID: {}", order.orderId)
                     warehouseService.decrementQuantity(order)!!.block()
                 }
                 Event.Type.ROLLBACK_QUANTITY -> {

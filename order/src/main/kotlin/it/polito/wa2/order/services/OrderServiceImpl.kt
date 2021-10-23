@@ -100,4 +100,8 @@ class OrderServiceImpl @Autowired constructor(
             .mapNotNull { e -> e?.let { mapper.entityToApi(it) } }
             .mapNotNull { e -> e?.let { setServiceAddress(it) } }
     }
+
+    override fun updateStatus(order: Order, status: String) {
+        TODO("Not yet implemented")
+    }
 }

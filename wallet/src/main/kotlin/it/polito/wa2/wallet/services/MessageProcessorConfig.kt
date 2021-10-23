@@ -25,7 +25,7 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
             when (event.eventType) {
                 Event.Type.QUANTITY_AVAILABLE -> {
                     val order: Order = event.data!!
-                    LOG.info("Create wallet with ID: {}", order.orderId)
+                    LOG.info("Process the payment for the order with ID: {}", order.orderId)
                     walletService.processPayment(order)!!.block()
                 }
                 Event.Type.ROLLBACK_PAYMENT -> {

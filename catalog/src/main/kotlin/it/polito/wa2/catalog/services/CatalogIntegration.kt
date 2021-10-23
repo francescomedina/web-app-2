@@ -75,6 +75,10 @@ class CatalogIntegration @Autowired constructor(
             ){ ex: WebClientResponseException -> handleException(ex) }
     }
 
+    override fun updateStatus(order: Order, status: String) {
+        TODO("Not yet implemented")
+    }
+
     override fun deleteOrder(orderId: Int): Mono<Void?>? {
         TODO("Not yet implemented")
     }

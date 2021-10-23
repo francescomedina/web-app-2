@@ -21,6 +21,11 @@ class MessageProcessorConfig @Autowired constructor(orderService: OrderService) 
         return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
             LOG.info("Process message created at {}...", event.eventCreatedAt)
             when (event.eventType) {
+                Event.Type.QUANTITY_DECREASED -> {
+                    val order: Order = event.data!!
+                    LOG.info("Order {} correctly handled", order.orderId)
+//                    orderService.updateStatus(order, "ISSUED").block()
+                }
                 Event.Type.QUANTITY_UNAVAILABLE -> {
                     val order: Order = event.data!!
                     LOG.info("Create order with ID: {}", order.orderId)
