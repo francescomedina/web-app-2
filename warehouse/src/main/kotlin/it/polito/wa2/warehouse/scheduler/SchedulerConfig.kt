@@ -1,4 +1,4 @@
-package it.polito.wa2.catalog.scheduler
+package it.polito.wa2.warehouse.scheduler
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value

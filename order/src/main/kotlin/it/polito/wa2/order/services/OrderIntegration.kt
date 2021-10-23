@@ -1,26 +1,35 @@
-package it.polito.wa2.catalog.services
+package it.polito.wa2.order.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.order.OrderService
+import it.polito.wa2.api.event.Event
 import it.polito.wa2.api.exceptions.InvalidInputException
 import it.polito.wa2.api.exceptions.NotFoundException
 import it.polito.wa2.util.http.HttpErrorInfo
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.cloud.stream.function.StreamBridge
 import org.springframework.http.HttpStatus
+import org.springframework.messaging.Message
+import org.springframework.messaging.support.MessageBuilder
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Scheduler
 import java.io.IOException
 import java.util.logging.Level
 
+@RestController
 @EnableAutoConfiguration
 @Component
-class CatalogIntegration @Autowired constructor(
+class OrderIntegration @Autowired constructor(
+    @Qualifier("publishEventScheduler") publishEventScheduler: Scheduler,
     mapper: ObjectMapper,
     webClientBuilder: WebClient.Builder,
     streamBridge: StreamBridge
@@ -28,8 +37,9 @@ class CatalogIntegration @Autowired constructor(
     private val webClient: WebClient
     private val mapper: ObjectMapper
     private val streamBridge: StreamBridge
+    private val publishEventScheduler: Scheduler
 
-    private val ORDER_SERVICE_URL = "http://order:8080"
+    private val ORDER_SERVICE_URL = "http://order"
     private val WALLET_SERVICE_URL = "http://wallet:8080"
     private val WAREHOUSE_SERVICE_URL = "http://warehouse:8080"
 
@@ -37,29 +47,16 @@ class CatalogIntegration @Autowired constructor(
         this.webClient = webClientBuilder.build()
         this.mapper = mapper
         this.streamBridge = streamBridge
+        this.publishEventScheduler = publishEventScheduler
     }
 
     override fun createOrder(body: Order?): Mono<Order?>? {
-        val url = "$ORDER_SERVICE_URL/orders/"
-        return webClient
-            .post()
-            .uri(url)
-            .body(Mono.just<Order>(body!!), Order::class.java)
-            .retrieve()
-            .bodyToMono(Order::class.java)
-            .log(LOG.name, Level.FINE)
-            .onErrorMap(
-                WebClientResponseException::class.java
-            ){ ex: WebClientResponseException -> handleException(ex) }
-//        return webClient
-//            .get()
-//            .uri(url)
-//            .retrieve()
-//            .bodyToMono(Order::class.java)
-//            .log(LOG.name, Level.FINE)
-//            .onErrorMap(
-//                WebClientResponseException::class.java
-//            ){ ex: WebClientResponseException -> handleException(ex) }
+        return Mono.fromCallable<Order> {
+            if (body != null) {
+                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
+            }
+            body
+        }.subscribeOn(publishEventScheduler)
     }
 
     override fun getOrder(orderId: Int): Mono<Order?> {
@@ -76,11 +73,13 @@ class CatalogIntegration @Autowired constructor(
     }
 
     override fun updateStatus(order: Order, status: String) {
-        TODO("Not yet implemented")
+        /// TODO update order status
+        return
     }
 
     override fun deleteOrder(orderId: Int): Mono<Void?>? {
-        TODO("Not yet implemented")
+        return Mono.fromRunnable<Any> { sendMessage("catalog-out-0", Event(Event.Type.ORDER_CANCELLED, orderId, null)) }
+            .subscribeOn(publishEventScheduler).then()
     }
 
 
@@ -103,13 +102,26 @@ class CatalogIntegration @Autowired constructor(
 
     fun getErrorMessage(ex: WebClientResponseException): String? {
         return try {
-           mapper.readValue(ex.responseBodyAsString, HttpErrorInfo::class.java).getError()
+            mapper.readValue(ex.responseBodyAsString, HttpErrorInfo::class.java).getError()
         } catch (ioex: IOException) {
             ex.message
         }
     }
 
+    fun sendMessage(bindingName: String, event: Event<*, *>) {
+        LOG.debug(
+            "Sending a {} message to {}",
+            event.eventType,
+            bindingName
+        )
+        val message: Message<*> = MessageBuilder.withPayload<Any>(event)
+            .setHeader("partitionKey", event.key)
+            .build()
+        streamBridge.send(bindingName, message)
+    }
+
+
     companion object {
-        private val LOG = LoggerFactory.getLogger(CatalogIntegration::class.java)
+        private val LOG = LoggerFactory.getLogger(OrderIntegration::class.java)
     }
 }

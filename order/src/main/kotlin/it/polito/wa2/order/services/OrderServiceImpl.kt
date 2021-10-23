@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 import java.util.logging.Level
 
-@RestController
+//@RestController
 @EnableAutoConfiguration
 class OrderServiceImpl @Autowired constructor(
     repository: OrderRepository,
@@ -99,5 +99,9 @@ class OrderServiceImpl @Autowired constructor(
             .log(LOG.name, Level.FINE)
             .mapNotNull { e -> e?.let { mapper.entityToApi(it) } }
             .mapNotNull { e -> e?.let { setServiceAddress(it) } }
+    }
+
+    override fun updateStatus(order: Order, status: String) {
+        TODO("Not yet implemented")
     }
 }
