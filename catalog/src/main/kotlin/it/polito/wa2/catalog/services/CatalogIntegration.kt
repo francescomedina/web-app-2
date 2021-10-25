@@ -20,6 +20,7 @@ import java.util.logging.Level
 
 @EnableAutoConfiguration
 @Component
+//TODO: Testare con branch di francesco
 class CatalogIntegration @Autowired constructor(
     mapper: ObjectMapper,
     webClientBuilder: WebClient.Builder,

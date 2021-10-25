@@ -19,6 +19,8 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
+import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.JavaMailSenderImpl
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -48,12 +50,12 @@ class CatalogApplication {
         return builder
             .routes()
             .route("order-route") { it ->
-                it.path(true, "/order1/**")
+                it.path(true, "/order-composite/**")
                     .filters { f->
                         f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/failure1")
                         }
-                        f.rewritePath("/order1", "/")
+                        f.rewritePath("/order-composite", "/")
 
                     }
 
@@ -67,6 +69,47 @@ class CatalogApplication {
     fun failure1(): String {
         return "Order service is unavailable"
     }
+
+
+    /** START JAVA MAIL SENDER **/
+
+    @Value("\${spring.mail.host}")
+    val host: String? = null
+    @Value("\${spring.mail.port}")
+    val port: Int? = 0
+    @Value("\${spring.mail.username}")
+    val username: String? = null
+    @Value("\${spring.mail.password}")
+    val password: String? = null
+    @Value("\${spring.mail.properties.mail.smtp.auth}")
+    val auth: String? = null
+    @Value("\${spring.mail.properties.mail.smtp.starttls.enable}")
+    val enable: String? = null
+    @Value("\${spring.mail.properties.mail.debug}")
+    val debug: String? = null
+
+    @Bean
+    fun getMailSender(): JavaMailSender {
+
+        val mailSender = JavaMailSenderImpl()
+        mailSender.host = host
+        mailSender.port = port ?: 8080
+
+        mailSender.username = username
+        mailSender.password = password
+
+        val props = mailSender.javaMailProperties
+        props["mail.transport.protocol"] = "smtp"
+        props["mail.smtp.auth"] = auth
+        props["mail.smtp.starttls.enable"] = enable
+        props["mail.debug"] = debug
+
+        return mailSender
+    }
+
+
+    /** END JAVA MAIL SENDER **/
+
 
 
     @Value("\${api.common.version}")

@@ -17,19 +17,49 @@ repositories {
 
 extra["springCloudVersion"] = "2020.0.3"
 
+
+
 dependencies {
     implementation(project(":api"))
     implementation(project(":util"))
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    // We need this for implementing security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
+    // Gateway require spring webflux, so we need to use it, and we use the Spring security webflux implementation
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+
     implementation ("org.springframework.cloud:spring-cloud-starter-gateway")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j")
-    implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
-    implementation("org.springdoc:springdoc-openapi-webflux-ui:1.5.9")
+
+    // We need this because this microservice need to be discoverable by Eureka
+    implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+
+    // Mongo DB to store user information
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
+
+    // Use for send confirmation email to the user
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
+
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.cloud:spring-cloud-stream")
+    implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
+    implementation("org.springdoc:springdoc-openapi-webflux-ui:1.5.9")
+
+
+    // For JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.11.2")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.2")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.2")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
