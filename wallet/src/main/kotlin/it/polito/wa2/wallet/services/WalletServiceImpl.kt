@@ -7,6 +7,7 @@ import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
 import it.polito.wa2.wallet.persistence.WalletRepository
 import it.polito.wa2.util.http.ServiceUtil
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -19,10 +20,10 @@ import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
 import reactor.core.scheduler.Scheduler
 
-@RestController
+
 @EnableAutoConfiguration
 class WalletServiceImpl @Autowired constructor(
-    @Qualifier("publishEventScheduler") publishEventScheduler: Scheduler,
+    //@Qualifier("publishEventScheduler") publishEventScheduler: Scheduler,
     repository: WalletRepository,
     mapper: WalletMapper,
     serviceUtil: ServiceUtil,
@@ -32,14 +33,14 @@ class WalletServiceImpl @Autowired constructor(
     private val repository: WalletRepository
     private val mapper: WalletMapper
     private val streamBridge: StreamBridge
-    private val publishEventScheduler: Scheduler
+    //private val publishEventScheduler: Scheduler
 
     init {
         this.repository = repository
         this.mapper = mapper
         this.serviceUtil = serviceUtil
         this.streamBridge = streamBridge
-        this.publishEventScheduler = publishEventScheduler
+       // this.publishEventScheduler = publishEventScheduler
     }
 
     override fun createWallet(body: Wallet?): Mono<Wallet?>? {
@@ -53,7 +54,7 @@ class WalletServiceImpl @Autowired constructor(
 
     override fun processPayment(order: Order): Mono<Order?>? {
         /// TODO("Process payment")
-        val payed = true
+     /*val payed = true
         if(payed){
             return Mono.fromCallable<Order> {
                 sendMessage("warehouse-out-0", Event(Event.Type.CREDIT_RESERVED, order.orderId, order))
@@ -64,6 +65,9 @@ class WalletServiceImpl @Autowired constructor(
             sendMessage("order-out-0", Event(Event.Type.CREDIT_UNAVAILABLE, order.orderId, order))
             order
         }.subscribeOn(publishEventScheduler)
+        */
+        return mono { Order() }
+
     }
 
     override fun deleteWallet(orderId: Int): Mono<Void?>? {

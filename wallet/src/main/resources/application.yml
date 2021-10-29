@@ -1,5 +1,4 @@
-
-server.port: 7001
+server.port: 7002
 server.error.include-message: always
 
 spring.application.name: wallet
@@ -13,6 +12,7 @@ eureka:
     initialInstanceInfoReplicationIntervalSeconds: 5
     registryFetchIntervalSeconds: 5
   instance:
+    hostname: localhost
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 

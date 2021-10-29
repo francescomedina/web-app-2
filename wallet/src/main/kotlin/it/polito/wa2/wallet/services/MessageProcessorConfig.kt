@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 import java.util.function.Consumer
-
+/*
 @EnableAutoConfiguration
 @Component
 class MessageProcessorConfig @Autowired constructor(walletService: WalletService) {
@@ -52,3 +52,5 @@ class MessageProcessorConfig @Autowired constructor(walletService: WalletService
         this.walletService = walletService
     }
 }
+
+ */

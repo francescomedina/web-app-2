@@ -53,7 +53,7 @@ class CatalogApplication {
                 it.path(true, "/order-composite/**")
                     .filters { f->
                         f.circuitBreaker {
-                                it -> it.setFallbackUri("forward:/failure1")
+                                it -> it.setFallbackUri("forward:/order-failure")
                         }
                         f.rewritePath("/order-composite", "/")
 
@@ -61,15 +61,32 @@ class CatalogApplication {
 
                     .uri("lb://order")
             }
+            .route("wallet-route") { it ->
+                it.path(true, "/wallet-composite/**")
+                    .filters { f->
+                        /*f.circuitBreaker {
+                                it -> it.setFallbackUri("forward:/wallet-failure")
+                        }*/
+                        f.rewritePath("/wallet-composite", "/wallets")
+
+                    }
+
+                    .uri("lb://wallet")
+            }
 
             .build()
     }
 
-    @GetMapping("/failure1")
-    fun failure1(): String {
+    @GetMapping("/order-failure")
+    fun orderFailure(): String {
         return "Order service is unavailable"
     }
 
+  /*  @GetMapping("/wallet-failure")
+    fun walletFailure(): String {
+        return "Wallet service is unavailable"
+    }
+*/
 
     /** START JAVA MAIL SENDER **/
 
