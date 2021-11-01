@@ -36,6 +36,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-stream")
 
     implementation("org.mapstruct:mapstruct-jdk8:1.3.1.Final")
+    implementation("org.projectlombok:lombok:1.18.20")
     kapt("org.mapstruct:mapstruct-processor:1.3.1.Final")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

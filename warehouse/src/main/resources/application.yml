@@ -21,7 +21,7 @@ spring.data.mongodb:
   port: 27017
   database: warehouse-db
 
-spring.cloud.function.definition: messageProcessor
+spring.cloud.function.definition: warehouseEventProcessor
 
 spring.cloud.stream:
   defaultBinder: kafka
@@ -35,13 +35,13 @@ spring.cloud.stream:
       destination: wallet
       producer:
         required-groups: auditGroup
-    messageProcessor-in-0:
+    warehouse-in-0:
       destination: warehouse
       group: warehouseGroup
       consumer:
-        maxAttempts: 3
-        backOffInitialInterval: 500
-        backOffMaxInterval: 1000
+        max-attempts: 1
+        backOffInitialInterval: 500000
+        backOffMaxInterval: 100000
         backOffMultiplier: 2.0
 #    warehouseProcessor-in-0:
 #      destination: warehouse-1
@@ -56,9 +56,10 @@ spring.cloud.stream:
       brokers: 127.0.0.1
       defaultBrokerPort: 9092
     bindings:
-      messageProcessor-in-0:
+      warehouse-in-0:
         consumer:
           enableDlq: true
+          dlqName: warehouse-events-dlq-v1
 #      warehouseProcessor-in-0:
 #        consumer:
 #          enableDlq: true

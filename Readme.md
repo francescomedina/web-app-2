@@ -12,3 +12,15 @@ the module will be added on the gradle tree, If the new module is not under the 
 - SOLO qunado faccio la purge dei containers e immagini funziona
 -Occhio al cambio scheda
 - Occhio al timeout del singolo topic -> MOTIVO
+
+-SEE MESSAGES FROM TOPIC
+-docker-compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic wallet --from-beginning --timeout-ms 1000
+
+- SEE MESSAGES FROM PARTITION 0 OF ORDER TOPIC
+- docker-compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order --from-beginning --timeout-ms 1000 --partition 0
+
+- MONITOR AND LIST ALL PARTITION AND OTHER INFO OFR A SPECIFIC TOPIC
+- docker-compose exec kafka /opt/kafka/bin/kafka-topics.sh --describe --zookeeper zookeeper --topic wallet
+
+- LIST TOPICS 
+- docker-compose exec kafka /opt/kafka/bin/kafka-topics.sh --zookeeper zookeeper --list

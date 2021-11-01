@@ -5,6 +5,8 @@ import it.polito.wa2.api.core.wallet.Wallet
 import it.polito.wa2.api.core.wallet.WalletService
 import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
+import it.polito.wa2.api.event.OrderEvent
+import it.polito.wa2.api.event.WalletEvent
 import it.polito.wa2.wallet.persistence.WalletRepository
 import it.polito.wa2.util.http.ServiceUtil
 import org.slf4j.LoggerFactory
@@ -14,6 +16,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.cloud.stream.function.StreamBridge
 import org.springframework.messaging.Message
 import org.springframework.messaging.support.MessageBuilder
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
@@ -51,26 +54,28 @@ class WalletServiceImpl @Autowired constructor(
         TODO("Not yet implemented")
     }
 
-    override fun processPayment(order: Order): Mono<Order?>? {
+    override fun processPayment(orderEvent: OrderEvent): Mono<WalletEvent> {
         /// TODO("Process payment")
         val payed = true
+        val wallet = Wallet()
         if(payed){
-            return Mono.fromCallable<Order> {
-                sendMessage("warehouse-out-0", Event(Event.Type.CREDIT_RESERVED, order.orderId, order))
-                order
-            }.subscribeOn(publishEventScheduler)
+            return Mono.fromCallable {
+                sendMessage("warehouse-out-0", WalletEvent(WalletEvent.Type.CREDIT_RESERVED, 123, wallet))
+                WalletEvent(WalletEvent.Type.CREDIT_RESERVED, 123, wallet)
+            }
         }
-        return Mono.fromCallable<Order> {
-            sendMessage("order-out-0", Event(Event.Type.CREDIT_UNAVAILABLE, order.orderId, order))
-            order
-        }.subscribeOn(publishEventScheduler)
+        return Mono.fromCallable {
+            sendMessage("warehouse-out-0", WalletEvent(WalletEvent.Type.CREDIT_RESERVED, 123, wallet))
+            WalletEvent(WalletEvent.Type.CREDIT_RESERVED, 123, wallet)
+        }
     }
+
 
     override fun deleteWallet(orderId: Int): Mono<Void?>? {
         TODO("Not yet implemented")
     }
 
-    fun sendMessage(bindingName: String, event: Event<*, *>) {
+    fun sendMessage(bindingName: String, event: WalletEvent) {
         LOG.debug(
             "Sending a {} message to {}",
             event.eventType,
