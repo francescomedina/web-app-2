@@ -2,7 +2,7 @@ package it.polito.wa2.wallet.services
 
 import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.wallet.Wallet
-import it.polito.wa2.api.core.wallet.WalletService
+
 import it.polito.wa2.api.event.Event
 import it.polito.wa2.api.exceptions.EventProcessingException
 import org.slf4j.LoggerFactory

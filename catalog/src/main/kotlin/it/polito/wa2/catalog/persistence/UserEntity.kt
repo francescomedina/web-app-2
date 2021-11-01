@@ -21,6 +21,8 @@ data class UserEntity(
     val email: String = "",
     var roles: String = "",
 
+    //TODO: Add this fields NAME - SURNAME - DELIVERY ADDRESS
+
     val createdDate: LocalDateTime = LocalDateTime.now(),
 
     // The user can perform or not some operation

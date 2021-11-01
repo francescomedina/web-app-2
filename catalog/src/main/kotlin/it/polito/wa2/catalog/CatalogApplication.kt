@@ -2,7 +2,7 @@ package it.polito.wa2.catalog
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.timelimiter.TimeLimiterConfig
-import it.polito.wa2.catalog.services.CatalogIntegration
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -55,6 +55,7 @@ class CatalogApplication {
                         f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/order-failure")
                         }
+
                         f.rewritePath("/order-composite", "/")
 
                     }
@@ -64,9 +65,10 @@ class CatalogApplication {
             .route("wallet-route") { it ->
                 it.path(true, "/wallet-composite/**")
                     .filters { f->
-                        /*f.circuitBreaker {
+                        f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/wallet-failure")
-                        }*/
+                        }
+                        f.addRequestParameter("userId", "PROVA")
                         f.rewritePath("/wallet-composite", "/wallets")
 
                     }
@@ -172,8 +174,8 @@ class CatalogApplication {
 //        return Schedulers.newBoundedElastic(threadPoolSize, taskQueueSize, "publish-pool")
 //    }
 
-    @Autowired
-    var integration: CatalogIntegration? = null
+    //@Autowired
+    //var integration: CatalogIntegration? = null
 //    @Bean
 //    fun coreServices(): ReactiveHealthContributor {
 //        val registry: MutableMap<String, ReactiveHealthIndicator> = LinkedHashMap()
