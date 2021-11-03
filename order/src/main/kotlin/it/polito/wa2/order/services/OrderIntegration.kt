@@ -15,7 +15,6 @@ import org.springframework.cloud.stream.function.StreamBridge
 import org.springframework.http.HttpStatus
 import org.springframework.messaging.Message
 import org.springframework.messaging.support.MessageBuilder
-import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
@@ -24,6 +23,7 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Scheduler
 import java.io.IOException
 import java.util.logging.Level
+
 
 @RestController
 @EnableAutoConfiguration
@@ -43,6 +43,9 @@ class OrderIntegration @Autowired constructor(
     private val WALLET_SERVICE_URL = "http://wallet:8080"
     private val WAREHOUSE_SERVICE_URL = "http://warehouse:8080"
 
+    @Autowired
+    private val orderStatusPublisher: OrderStatusPublisher? = null
+
     init {
         this.webClient = webClientBuilder.build()
         this.mapper = mapper
@@ -51,12 +54,22 @@ class OrderIntegration @Autowired constructor(
     }
 
     override fun createOrder(body: Order?): Mono<Order?>? {
+//        return Mono.fromCallable<Order> {
+//            if (body != null) {
+//                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
+//            }
+//            body
+//        }.subscribeOn(publishEventScheduler)
+//        val purchaseOrder: PurchaseOrder = orderRepository.save(getPurchaseOrder(orderRequestDto))
+//        orderRequestDto.setOrderId(purchaseOrder.getId())
+        //Product a kafka event with status order created
+        //Product a kafka event with status order created
         return Mono.fromCallable<Order> {
             if (body != null) {
-                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
+                orderStatusPublisher!!.publishOrderEvent(body)
             }
             body
-        }.subscribeOn(publishEventScheduler)
+        }
     }
 
     override fun getOrder(orderId: Int): Mono<Order?> {

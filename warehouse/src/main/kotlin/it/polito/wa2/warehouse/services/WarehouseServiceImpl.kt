@@ -4,6 +4,8 @@ import it.polito.wa2.api.core.order.Order
 import it.polito.wa2.api.core.warehouse.Warehouse
 import it.polito.wa2.api.core.warehouse.WarehouseService
 import it.polito.wa2.api.event.Event
+import it.polito.wa2.api.event.OrderEvent
+import it.polito.wa2.api.event.WarehouseEvent
 import it.polito.wa2.util.http.ServiceUtil
 import it.polito.wa2.warehouse.persistence.WarehouseRepository
 import org.slf4j.LoggerFactory
@@ -40,19 +42,13 @@ class WarehouseServiceImpl @Autowired constructor(
         this.publishEventScheduler = publishEventScheduler
     }
 
-    override fun checkAvailability(order: Order?): Mono<Order?>?{
+    override fun checkAvailability(orderEvent: OrderEvent?): Mono<WarehouseEvent>{
         /// TODO: check availability
         val available = true
-        if(available){
-            return Mono.fromCallable<Order> {
-                sendMessage("wallet-out-0", Event(Event.Type.QUANTITY_AVAILABLE, order!!.orderId, order))
-                order
-            }.subscribeOn(publishEventScheduler)
+        val warehouse: Warehouse = Warehouse()
+        return Mono.fromCallable {
+            WarehouseEvent(WarehouseEvent.Type.QUANTITY_AVAILABLE, 123, warehouse)
         }
-        return Mono.fromCallable<Order> {
-            sendMessage("order-out-0", Event(Event.Type.QUANTITY_UNAVAILABLE, order!!.orderId, order))
-            order
-        }.subscribeOn(publishEventScheduler)
     }
 
     override fun decrementQuantity(order: Order?): Mono<Order?>? {

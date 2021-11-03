@@ -50,23 +50,23 @@ class WarehouseEventProcessor @Autowired constructor(warehouseService: Warehouse
         this.warehouseService = warehouseService
     }
 }*/
-@EnableAutoConfiguration
-@Component
-class WarehousePublisherConfig {
-    @Bean
-    fun orderSinks(): Sinks.Many<OrderEvent> {
-        return Sinks.many().multicast().onBackpressureBuffer()
-    }
-
-    /*This will send message to kafka topic order-event based on configuration defined in application.yaml
-    definitions will use method bean name order supplier*/
+//@EnableAutoConfiguration
+//@Component
+//class WarehousePublisherConfig {
 //    @Bean
-//    fun orderSupplier(sinks: Sinks.Many<OrderEvent?>?): Supplier<Flux<OrderEvent>> {
-//        return sinks::asFlux
+//    fun orderSinks(): Sinks.Many<OrderEvent> {
+//        return Sinks.many().multicast().onBackpressureBuffer()
 //    }
-
-    @Bean
-    fun orderSupplier(sinks: Sinks.Many<OrderEvent?>?): () -> Flux<OrderEvent?> {
-        return sinks!!::asFlux
-    }
-}
+//
+//    /*This will send message to kafka topic order-event based on configuration defined in application.yaml
+//    definitions will use method bean name order supplier*/
+////    @Bean
+////    fun orderSupplier(sinks: Sinks.Many<OrderEvent?>?): Supplier<Flux<OrderEvent>> {
+////        return sinks::asFlux
+////    }
+//
+//    @Bean
+//    fun orderSupplier(sinks: Sinks.Many<OrderEvent?>?): () -> Flux<OrderEvent?> {
+//        return sinks!!::asFlux
+//    }
+//}

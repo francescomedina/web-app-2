@@ -15,7 +15,7 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.cloud.function.definition: messageProcessor
+spring.cloud.function.definition: orderSupplier;warehouseEventConsumer
 
 spring.cloud.stream:
   defaultBinder: kafka
@@ -25,17 +25,31 @@ spring.cloud.stream:
 #      destination: wallet
 #      producer:
 #        required-groups: auditGroup
-    warehouse-out-0:
-      destination: warehouse
-      producer:
-        required-groups: auditGroup
-    order-in-0:
+#    warehouse-out-0:
+#      destination: warehouse
+#      producer:
+#        required-groups: auditGroup
+#    order-in-0:
+#      destination: order
+#      group: orderGroup
+#      consumer:
+#        max-attempts: 1
+#        backOffInitialInterval: 500000
+#        backOffMaxInterval: 100000
+#        backOffMultiplier: 2.0
+    orderSupplier-out-0:
       destination: order
-      group: orderGroup
       consumer:
-        max-attempts: 1
-        backOffInitialInterval: 500000
-        backOffMaxInterval: 100000
+        maxAttempts: 1
+        backOffInitialInterval: 500
+        backOffMaxInterval: 1000
+        backOffMultiplier: 2.0
+    warehouseEventConsumer-in-0:
+      destination: warehouse
+      consumer:
+        maxAttempts: 1
+        backOffInitialInterval: 500
+        backOffMaxInterval: 1000
         backOffMultiplier: 2.0
   kafka:
     binder:

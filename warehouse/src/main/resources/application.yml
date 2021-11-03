@@ -21,28 +21,28 @@ spring.data.mongodb:
   port: 27017
   database: warehouse-db
 
-spring.cloud.function.definition: warehouseEventProcessor
+spring.cloud.function.definition: warehouseProcessor
 
 spring.cloud.stream:
   defaultBinder: kafka
   default.contentType: application/json
   bindings:
-    order-out-0:
-      destination: order
-      producer:
-        required-groups: auditGroup
-    wallet-out-0:
-      destination: wallet
-      producer:
-        required-groups: auditGroup
-    warehouse-in-0:
-      destination: warehouse
-      group: warehouseGroup
-      consumer:
-        max-attempts: 1
-        backOffInitialInterval: 500000
-        backOffMaxInterval: 100000
-        backOffMultiplier: 2.0
+#    order-out-0:
+#      destination: order
+#      producer:
+#        required-groups: auditGroup
+#    wallet-out-0:
+#      destination: wallet
+#      producer:
+#        required-groups: auditGroup
+#    warehouse-in-0:
+#      destination: warehouse
+#      group: warehouseGroup
+#      consumer:
+#        max-attempts: 1
+#        backOffInitialInterval: 500000
+#        backOffMaxInterval: 100000
+#        backOffMultiplier: 2.0
 #    warehouseProcessor-in-0:
 #      destination: warehouse-1
 #      group: walletGroup
@@ -51,6 +51,20 @@ spring.cloud.stream:
 #        backOffInitialInterval: 500
 #        backOffMaxInterval: 1000
 #        backOffMultiplier: 2.0
+    warehouseProcessor-in-0:
+      destination: order
+      consumer:
+        maxAttempts: 1
+        backOffInitialInterval: 500
+        backOffMaxInterval: 1000
+        backOffMultiplier: 2.0
+    warehouseProcessor-out-0:
+      destination: warehouse
+      consumer:
+        maxAttempts: 1
+        backOffInitialInterval: 500
+        backOffMaxInterval: 1000
+        backOffMultiplier: 2.0
   kafka:
     binder:
       brokers: 127.0.0.1
