@@ -21,17 +21,13 @@ spring.cloud.stream:
   defaultBinder: kafka
   default.contentType: application/json
   bindings:
-    wallet-out-0:
-      destination: wallet
-      producer:
-        required-groups: auditGroup
-    warehouse-out-0:
-      destination: warehouse
+    order-out-0:
+      destination: order
       producer:
         required-groups: auditGroup
     messageProcessor-in-0:
-      destination: order
-      group: orderGroup
+      destination: warehouse
+      group: warehouseGroup
       consumer:
         maxAttempts: 3
         backOffInitialInterval: 500

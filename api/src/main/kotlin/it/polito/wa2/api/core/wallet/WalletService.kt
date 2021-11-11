@@ -10,6 +10,6 @@ import reactor.core.publisher.Mono
     fun createWallet(body: WalletDTO?): Mono<Wallet?>?
 
     fun getWallet(@PathVariable walletId: Int): Mono<Wallet?>?
-    fun processPayment(order: Order): Mono<Order?>?
+    fun processPayment(order: Order): Boolean
     fun deleteWallet(orderId: Int): Mono<Void?>?
 }*/

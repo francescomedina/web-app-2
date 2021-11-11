@@ -7,6 +7,9 @@ import reactor.core.publisher.Mono
 
 
 interface OrderService {
+
+    fun persistOrder(body: Order?): Order?
+
     @PostMapping(value = ["/orders"], consumes = ["application/json"])
     fun createOrder(body: Order?): Mono<Order?>?
 

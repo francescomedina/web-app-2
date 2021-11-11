@@ -53,10 +53,22 @@ class OrderIntegration @Autowired constructor(
     override fun createOrder(body: Order?): Mono<Order?>? {
         return Mono.fromCallable<Order> {
             if (body != null) {
-                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
+                sendMessage("order-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
             }
             body
         }.subscribeOn(publishEventScheduler)
+    }
+
+    override fun persistOrder(body: Order?): Order? {
+        // TODO SALVO L'ORDINE SUL DB
+        // PERCHE' HO LE CONDIZIONI NECESSARIE (CREDITO SUFFICIENTE E DISPONIBILITA' PRODOTTI) PER POTER PIAZZARE L'ORDINE
+//        return Mono.fromCallable<Order> {
+//            if (body != null) {
+//                sendMessage("warehouse-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
+//            }
+//            body
+//        }.subscribeOn(publishEventScheduler)
+        return body
     }
 
     override fun getOrder(orderId: Int): Mono<Order?> {

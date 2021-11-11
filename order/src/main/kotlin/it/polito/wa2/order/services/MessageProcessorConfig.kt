@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Component
 import java.util.function.Consumer
+import java.util.function.Function
 
 @EnableAutoConfiguration
 @Component
@@ -24,12 +25,12 @@ class MessageProcessorConfig @Autowired constructor(orderService: OrderService) 
                 Event.Type.QUANTITY_DECREASED -> {
                     val order: Order = event.data!!
                     LOG.info("Order {} correctly handled", order.orderId)
-//                    orderService.updateStatus(order, "ISSUED").block()
+                    orderService.persistOrder(order)
                 }
                 Event.Type.QUANTITY_UNAVAILABLE -> {
                     val order: Order = event.data!!
                     LOG.info("Create order with ID: {}", order.orderId)
-                    orderService.createOrder(order)!!.block()
+//                    orderService.initOrder(order)!!.block()
                 }
                 Event.Type.CREDIT_UNAVAILABLE -> {
                     val productId: Int = event.key!!

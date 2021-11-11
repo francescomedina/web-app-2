@@ -18,7 +18,7 @@ interface WarehouseService {
     @GetMapping(value = ["/order/{warehouseId}"], produces = ["application/json"])
     fun getWarehouse(@PathVariable warehouseId: Int): Mono<Warehouse?>?
 
-    fun checkAvailability(order: Order?): Mono<Order?>?
+    fun checkAvailability(order: Order?): Boolean
 
     fun decrementQuantity(order: Order?): Mono<Order?>?
 

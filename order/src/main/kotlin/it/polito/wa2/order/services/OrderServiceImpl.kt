@@ -52,6 +52,10 @@ class OrderServiceImpl @Autowired constructor(
         this.serviceUtil = serviceUtil
     }
 
+    override fun persistOrder(body: Order?): Order? {
+        TODO("Not yet implemented")
+    }
+
 //    override fun createOrder(body: Order): Mono<Order?>? {
 //        if (body != null) {
 //            if (body.orderId < 1) {
