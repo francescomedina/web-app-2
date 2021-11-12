@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.logging.Level
 
@@ -35,6 +36,10 @@ class OrderServiceImpl @Autowired constructor(
             .log(LOG.name, Level.FINE)
             .mapNotNull { e -> e?.let { repository.delete(it) } }
             .flatMap { e -> e }
+    }
+
+    override fun putOrder(body: Order?): Mono<Order?>? {
+        TODO("Not yet implemented")
     }
 
     private fun setServiceAddress(e: Order): Order {
@@ -102,6 +107,10 @@ class OrderServiceImpl @Autowired constructor(
             .log(LOG.name, Level.FINE)
             .mapNotNull { e -> e?.let { mapper.entityToApi(it) } }
             .mapNotNull { e -> e?.let { setServiceAddress(it) } }
+    }
+
+    override fun getOrders(): Flux<Order?>? {
+        TODO("Not yet implemented")
     }
 
     override fun updateStatus(order: Order, status: String) {

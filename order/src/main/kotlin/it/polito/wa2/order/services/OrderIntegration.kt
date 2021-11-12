@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Scheduler
 import java.io.IOException
@@ -84,14 +85,23 @@ class OrderIntegration @Autowired constructor(
             ){ ex: WebClientResponseException -> handleException(ex) }
     }
 
+    override fun getOrders(): Flux<Order?>? {
+        TODO("Not yet implemented")
+    }
+
     override fun updateStatus(order: Order, status: String) {
-        /// TODO update order status
+        /// TODO update order status ONCE PAYED
+        // NOTIFY VIA EMAIL
         return
     }
 
     override fun deleteOrder(orderId: Int): Mono<Void?>? {
-        return Mono.fromRunnable<Any> { sendMessage("catalog-out-0", Event(Event.Type.ORDER_CANCELLED, orderId, null)) }
+        return Mono.fromRunnable<Any> { sendMessage("order-out-0", Event(Event.Type.ORDER_CANCELLED, orderId, null)) }
             .subscribeOn(publishEventScheduler).then()
+    }
+
+    override fun putOrder(body: Order?): Mono<Order?>? {
+        TODO("Not yet implemented")
     }
 
 
