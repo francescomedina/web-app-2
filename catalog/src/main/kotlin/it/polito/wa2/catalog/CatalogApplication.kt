@@ -68,7 +68,6 @@ class CatalogApplication {
                         f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/wallet-failure")
                         }
-                        f.addRequestParameter("userId", "PROVA")
                         f.rewritePath("/wallet-composite", "/wallets")
 
                     }

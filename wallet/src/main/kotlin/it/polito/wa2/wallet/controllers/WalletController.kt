@@ -1,7 +1,7 @@
 package it.polito.wa2.wallet.controllers
 
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
-import it.polito.wa2.util.jwt.JwtUtils
+import it.polito.wa2.util.jwt.JwtValidateUtils
 import it.polito.wa2.wallet.dto.WalletDTO
 import it.polito.wa2.wallet.services.WalletServiceImpl
 import org.springframework.http.HttpStatus
@@ -16,7 +16,7 @@ import javax.validation.Valid
 @RequestMapping("/wallets")
 class WalletController(
     val walletServiceImpl: WalletServiceImpl,
-    val jwtUtils: JwtUtils
+    val jwtUtils: JwtValidateUtils
 ) {
 
     /**
@@ -51,7 +51,7 @@ class WalletController(
     /**
      * POST /wallets
      * Create a new wallet for a given customer. The wallet will have 0 money at the beginning.
-     * @param body: Request Body with the id of the user (customer) that want to create the wallet
+     * @param walletDTO: Request Body with the id of the user (customer) that want to create the wallet
      * //TODO: FIELD VALIDATION
      * @return 201 (create) or an error message
      * */

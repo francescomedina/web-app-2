@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 @Component
-class JwtUtils {
+class JwtValidateUtils {
     @Value("\${application.jwt.jwtSecret}")
     val secret: String = ""
 
