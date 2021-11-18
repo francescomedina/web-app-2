@@ -18,35 +18,47 @@ class MessageProcessorConfig @Autowired constructor(orderService: OrderService) 
     private val orderService: OrderService
 
     @Bean
-    fun messageProcessor(): Consumer<Event<Int?, Order?>> {
-        return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
-            LOG.info("ORDER SERVICE: Process message created at {}...", event.eventCreatedAt)
-            when (event.eventType) {
-                Event.Type.QUANTITY_DECREASED -> {
-                    val order: Order = event.data!!
-                    LOG.info("Order {} correctly handled", order.orderId)
-                    orderService.persistOrder(order)
-                }
-                Event.Type.QUANTITY_UNAVAILABLE -> {
-                    val order: Order = event.data!!
-                    LOG.info("Create order with ID: {}", order.orderId)
-//                    orderService.initOrder(order)!!.block()
-                }
-                Event.Type.CREDIT_UNAVAILABLE -> {
-                    val productId: Int = event.key!!
-//                    LOG.info("Delete recommendations with ProductID: {}", productId)
-//                    productService.deleteProduct(productId).block()
-                }
-                else -> {
-                    val errorMessage = "Incorrect event type: " + event.eventType
-                        .toString() + ", expected a CREATE or DELETE event"
-                    LOG.warn(errorMessage)
-                    throw EventProcessingException(errorMessage)
-                }
-            }
-            LOG.info("Message processing done!")
-        }
+    fun confirmOrder() = Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
+        val order: Order = event.data!!
+        LOG.info("Order {} correctly handled", order.orderId)
+//        orderService.createOrder(order).let {
+//            if(it)
+//                Event(Event.Type.CREDIT_RESERVED, 123,order)
+//            else
+//                Event(Event.Type.CREDIT_UNAVAILABLE, 123,order)
+//        }
     }
+
+//    @Bean
+//    fun messageProcessor(): Consumer<Event<Int?, Order?>> {
+//        return Consumer<Event<Int?, Order?>> { event: Event<Int?, Order?> ->
+//            LOG.info("ORDER SERVICE: Process message created at {}...", event.eventCreatedAt)
+//            when (event.eventType) {
+//                Event.Type.QUANTITY_DECREASED -> {
+//                    val order: Order = event.data!!
+//                    LOG.info("Order {} correctly handled", order.orderId)
+//                    orderService.persistOrder(order)
+//                }
+//                Event.Type.QUANTITY_UNAVAILABLE -> {
+//                    val order: Order = event.data!!
+//                    LOG.info("Create order with ID: {}", order.orderId)
+////                    orderService.initOrder(order)!!.block()
+//                }
+//                Event.Type.CREDIT_UNAVAILABLE -> {
+//                    val productId: Int = event.key!!
+////                    LOG.info("Delete recommendations with ProductID: {}", productId)
+////                    productService.deleteProduct(productId).block()
+//                }
+//                else -> {
+//                    val errorMessage = "ORDER-SERVICE: Incorrect event type: " + event.eventType
+//                        .toString() + ", expected a CREATE or DELETE event"
+//                    LOG.warn(errorMessage)
+//                    throw EventProcessingException(errorMessage)
+//                }
+//            }
+//            LOG.info("Message processing done!")
+//        }
+//    }
 
     companion object {
         val LOG = LoggerFactory.getLogger(MessageProcessorConfig::class.java)

@@ -41,8 +41,8 @@ class OrderIntegration @Autowired constructor(
     private val publishEventScheduler: Scheduler
 
     private val ORDER_SERVICE_URL = "http://order"
-    private val WALLET_SERVICE_URL = "http://wallet:8080"
-    private val WAREHOUSE_SERVICE_URL = "http://warehouse:8080"
+    private val WALLET_SERVICE_URL = "http://wallet:8008"
+    private val WAREHOUSE_SERVICE_URL = "http://warehouse:8008"
 
     init {
         this.webClient = webClientBuilder.build()

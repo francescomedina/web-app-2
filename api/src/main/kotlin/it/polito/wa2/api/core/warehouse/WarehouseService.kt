@@ -20,7 +20,7 @@ interface WarehouseService {
 
     fun checkAvailability(order: Order?): Boolean
 
-    fun decrementQuantity(order: Order?): Mono<Order?>?
+    fun decrementQuantity(order: Order?): Boolean
 
     fun deleteWarehouse(orderId: Int): Mono<Void?>?
 }

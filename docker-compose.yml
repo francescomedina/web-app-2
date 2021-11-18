@@ -15,16 +15,17 @@ services:
       kafka:
         condition: service_started
 
-  order-p1:
-    build: ./order
-    mem_limit: 512m
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      kafka:
-        condition: service_started
+#  order-p1:
+#    build: ./order
+#    mem_limit: 512m
+#    environment:
+##      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+#      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+#    depends_on:
+#      mongodb:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_started
 
   wallet:
     build: ./wallet
@@ -40,16 +41,16 @@ services:
       kafka:
         condition: service_started
 
-  wallet-p1:
-    build: ./wallet
-    mem_limit: 512m
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      kafka:
-        condition: service_started
+#  wallet-p1:
+#    build: ./wallet
+#    mem_limit: 512m
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+#    depends_on:
+#      mongodb:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_started
 
   warehouse:
     build: ./warehouse
@@ -65,22 +66,22 @@ services:
       kafka:
         condition: service_started
 
-  warehouse-p1:
-    build: ./warehouse
-    mem_limit: 512m
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      kafka:
-        condition: service_started
+#  warehouse-p1:
+#    build: ./warehouse
+#    mem_limit: 512m
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+#    depends_on:
+#      mongodb:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_started
 
   catalog:
     build: ./catalog
     mem_limit: 512m
     ports:
-      - "8080:8080"
+      - "8008:8008"
       - "5005:5005"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -91,16 +92,16 @@ services:
       kafka:
         condition: service_started
 
-  catalog-p1:
-    build: ./catalog
-    mem_limit: 512m
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      kafka:
-        condition: service_started
+#  catalog-p1:
+#    build: ./catalog
+#    mem_limit: 512m
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker,streaming_partitioned,streaming_instance_1,kafka
+#    depends_on:
+#      mongodb:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_started
 
   mongodb:
     image: mongo:4.4.2
@@ -113,6 +114,16 @@ services:
       interval: 5s
       timeout: 2s
       retries: 60
+
+  kowl:
+    image: quay.io/cloudhut/kowl:master-d782eab
+    container_name: kowl
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: kafka:9092
 
   kafka:
     image: wurstmeister/kafka:2.12-2.5.0
