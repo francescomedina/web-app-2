@@ -1,55 +1,32 @@
 package it.polito.wa2.wallet.services
 
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
-import it.polito.wa2.api.core.order.Order
-import it.polito.wa2.api.core.wallet.Wallet
-import it.polito.wa2.api.event.Event
 import it.polito.wa2.wallet.repositories.WalletRepository
-import it.polito.wa2.util.http.ServiceUtil
 import it.polito.wa2.wallet.controllers.ErrorResponse
+import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.domain.WalletEntity
 import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.WalletDTO
+import it.polito.wa2.wallet.dto.toTransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
+import it.polito.wa2.wallet.repositories.TransactionRepository
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.cloud.stream.function.StreamBridge
 import org.springframework.http.HttpStatus
-import org.springframework.messaging.Message
-import org.springframework.messaging.support.MessageBuilder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.math.BigDecimal
-import java.util.*
+import java.time.Instant
 
 @Service
 //@EnableAutoConfiguration
 class WalletServiceImpl(
-    //@Qualifier("publishEventScheduler") publishEventScheduler: Scheduler,
     val walletRepository: WalletRepository,
-    //mapper: WalletMapper,
-    //serviceUtil: ServiceUtil,
-    //streamBridge: StreamBridge
+    val transactionRepository: TransactionRepository,
 ) : WalletService {
-
-    //private val serviceUtil: ServiceUtil
-    //private val repository: WalletRepository
-    //private val mapper: WalletMapper
-    //private val streamBridge: StreamBridge
-    //private val publishEventScheduler: Scheduler
-
-    /*init {
-        this.repository = repository
-        this.mapper = mapper
-        this.serviceUtil = serviceUtil
-        this.streamBridge = streamBridge
-       // this.publishEventScheduler = publishEventScheduler
-    }*/
 
     override fun createWallet(userInfoJWT: UserInfoJWT, username: String): Mono<WalletDTO> {
 
@@ -82,24 +59,111 @@ class WalletServiceImpl(
         throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
     }
 
-    override fun createTransaction(userId: Long, transactionDTO: TransactionDTO): TransactionDTO? {
-        TODO("Not yet implemented")
+    // Since we update multiple documents we annotated with transactional
+    @Transactional
+    override suspend fun createTransaction(userInfoJWT: UserInfoJWT, transactionDTO: TransactionDTO): TransactionDTO? {
+        if (transactionDTO.senderWalletId.toString() == transactionDTO.receiverWalletId.toString()) {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "The sender id and receiver id are the same")
+        }
+
+        // Check if the senderWalletId and receiverWalletId are valid id
+        val senderWallet = walletRepository.findById(transactionDTO.senderWalletId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
+
+        val receiverWallet = walletRepository.findById(transactionDTO.receiverWalletId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
+
+        // Check if the owner of the senderWallet is the same of the JWT
+        if (senderWallet.customerUsername != userInfoJWT.username) {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Only the wallet owner can create transaction")
+        }
+
+        // Check if the sender has enough money to carry out the transaction
+        if (senderWallet.amount < transactionDTO.amount) {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Sender has not enough money to compute the transaction")
+        }
+
+        // Additional check that the required fields didn't change
+        if (transactionDTO.amount != null && senderWallet.id != null && receiverWallet.id != null) {
+
+            // Calculate the new money
+            senderWallet.amount -= transactionDTO.amount
+            receiverWallet.amount += transactionDTO.amount
+
+            walletRepository.save(senderWallet).onErrorMap {
+                throw ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error")
+            }.awaitSingle()
+
+            walletRepository.save(receiverWallet).onErrorMap {
+                throw ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error")
+            }.awaitSingle()
+
+            val newTransaction = TransactionEntity(
+                amount = transactionDTO.amount,
+                time = Instant.now(),
+                senderWalletId = senderWallet.id,
+                receiverWalletId = receiverWallet.id
+            )
+
+            return transactionRepository.save(newTransaction).awaitSingleOrNull()?.toTransactionDTO()
+        }
+
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "Generic Error")
     }
 
-    override fun getAllWalletTransactions(walletId: Long): Iterable<TransactionDTO> {
-        TODO("Not yet implemented")
+    override suspend fun getTransactionsByPeriod(
+        userInfoJWT: UserInfoJWT,
+        walletId: ObjectId,
+        start: Instant,
+        end: Instant
+    ): Flux<TransactionEntity?> {
+
+        val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
+
+        // Check that the login user is the owner of the wallet requested or is an admin (can see others wallet)
+        if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
+
+            val transactions = transactionRepository.findAllByTimeBetweenAndSenderWalletIdOrReceiverWalletId(
+                start,
+                end,
+                walletId,
+                walletId
+            )
+            return transactions
+        }
+
+        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see these transactions")
+
     }
 
-    override fun getTransactionsByPeriod(walletId: Long, start: Date, end: Date): Iterable<TransactionDTO> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun getTransactionByIdAndWalletId(
+        userInfoJWT: UserInfoJWT,
+        transactionId: ObjectId,
+        walletId: ObjectId
+    ): TransactionDTO {
+        val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
 
-    override fun getTransactionByIdAndWalletId(id: Long, wallet_id: Long): TransactionDTO? {
-        TODO("Not yet implemented")
+        val transaction = transactionRepository.findById(transactionId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Transaction not found")
+
+
+        // Check that the login user is the owner of the wallet requested or is an admin (can see others wallet)
+        if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
+
+            // Check that the requested transaction belongs to the wallet or is an admin
+            if (transaction.senderWalletId == wallet.id || transaction.receiverWalletId == wallet.id || userInfoJWT.isAdmin()) {
+                return transaction.toTransactionDTO()
+            }
+        }
+
+        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see this transaction")
+
     }
 
     /*override fun processPayment(order: Order): Mono<Order?>? {
-        /// TODO("Process payment")
+
      /*val payed = true
         if(payed){
             return Mono.fromCallable<Order> {

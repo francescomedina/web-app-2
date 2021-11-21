@@ -2,28 +2,33 @@ package it.polito.wa2.wallet.dto
 
 import it.polito.wa2.wallet.domain.TransactionEntity
 import org.bson.types.ObjectId
+import org.springframework.cloud.function.context.config.getSuspendingFunctionReturnType
+import org.springframework.data.mongodb.core.mapping.FieldType
+import org.springframework.data.mongodb.core.mapping.MongoId
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
+import javax.validation.constraints.DecimalMin
 import javax.validation.constraints.Min
+import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 
 data class TransactionDTO(
     var id: ObjectId? = null,
 
-    @NotNull
-    @field:Min(0, message="Amount must be positive")
-    var amount: BigDecimal = BigDecimal(0.0),
-    @NotNull
-    var time: Instant = Instant.now(),
-    @NotNull
-    val senderWalletId: ObjectId,
-    @NotNull
-    val receiverWalletId: ObjectId
-) {
-}
+    @field:DecimalMin(value = "0.01", message="Amount must be greater than 0")
+    @field:NotNull(message = "Missing required body parameter: amount")
+    val amount: BigDecimal?,
 
-//fun Transaction.toTransactionDTO() = TransactionDTO(id, amount, time, sender.id!!, receiver.id!!)
+    var time: Instant = Instant.now(),
+
+    var senderWalletId: ObjectId? = null,
+
+    @field:NotNull(message = "Missing required body parameter: receiverWalletId")
+    val receiverWalletId: ObjectId?,
+) {
+
+}
 
 fun TransactionEntity.toTransactionDTO() : TransactionDTO{
    return TransactionDTO(id = id, amount = amount, time=time, senderWalletId=senderWalletId, receiverWalletId=receiverWalletId)

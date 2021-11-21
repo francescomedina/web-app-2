@@ -9,7 +9,7 @@ import it.polito.wa2.wallet.domain.WalletEntity
 
 //@Mapper(componentModel = "spring")
 interface WalletMapper {
-    // TODO: ask francesco - errore se tolgo commenti dopo modifca a WalletEntity
+    //
    // @Mappings(Mapping(target = "serviceAddress", ignore = true))
    // fun entityToApi(entity: WalletEntity): Wallet
 

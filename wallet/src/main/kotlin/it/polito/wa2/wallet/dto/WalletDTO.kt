@@ -5,6 +5,7 @@ import it.polito.wa2.wallet.domain.WalletEntity
 import org.bson.types.ObjectId
 import java.math.BigDecimal
 import javax.validation.constraints.Min
+import javax.validation.constraints.NotBlank
 
 data class WalletDTO(
     val id: String = "",
@@ -12,6 +13,7 @@ data class WalletDTO(
     @field:Min(0, message = "Amount must be positive")
     var amount: BigDecimal = BigDecimal(0.0),
 
+    @field:NotBlank(message = "CustomerUsername is required")
     val customerUsername: String = "",
 
     val purchases: List<TransactionDTO> = emptyList(),
