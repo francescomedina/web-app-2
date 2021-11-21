@@ -13,7 +13,7 @@ import java.util.*
 
 interface WalletService {
     fun createWallet(userInfoJWT: UserInfoJWT, username: String): Mono<WalletDTO>
-    suspend fun getWalletById(userInfoJWT: UserInfoJWT, walletId: String): WalletDTO
+    suspend fun getWalletById(userInfoJWT: UserInfoJWT, walletId: ObjectId): WalletDTO
     suspend fun createTransaction(userInfoJWT: UserInfoJWT,transactionDTO: TransactionDTO): TransactionDTO?
 
     suspend fun getTransactionsByPeriod(userInfoJWT: UserInfoJWT, walletId: ObjectId, start: Instant, end: Instant): Flux<TransactionEntity?>

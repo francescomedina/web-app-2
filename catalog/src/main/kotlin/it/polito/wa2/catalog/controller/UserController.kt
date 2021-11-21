@@ -1,40 +1,30 @@
 package it.polito.wa2.catalog.controller
 
-import it.polito.wa2.catalog.DTO.*
-import it.polito.wa2.catalog.persistence.UserEntity
-import it.polito.wa2.catalog.persistence.UserRepository
+
+import it.polito.wa2.catalog.dto.RegistrationBody
 import it.polito.wa2.catalog.security.JwtUtils
 import it.polito.wa2.catalog.security.Rolename
 import it.polito.wa2.catalog.services.ErrorResponse
 import it.polito.wa2.catalog.services.UserDetailsServiceImpl
+
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.validation.ObjectError
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.bind.support.WebExchangeBindException
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
 import java.security.Principal
-import java.util.function.Function
-import java.util.stream.Collectors
 import javax.validation.Valid
 import javax.validation.constraints.NotNull
-
 
 @RestController
 @RequestMapping("/auth")
 class UserController(
     private val jwtUtils: JwtUtils,
     private val encoder: PasswordEncoder,
-    private val users: UserDetailsServiceImpl,
-
     private val userDetailsServiceImpl: UserDetailsServiceImpl,
-    private val userRepository: UserRepository
-
 ) {
 
     /**
@@ -43,39 +33,40 @@ class UserController(
      * @return the user created or a bad request if some errors occurred
      */
     @PostMapping("/register")
-    suspend fun register(@RequestBody @Valid data: Mono<RegistrationBody>): ResponseEntity<UserDetailsDTO> {
+    suspend fun register(@RequestBody @Valid data: RegistrationBody): ResponseEntity<UserDetailsDTO> {
 
-        data.awaitSingleOrNull()?.let { it ->
-            if (it.password == it.confirmPassword) {
+        if (data.password == data.confirmPassword) {
 
-                // Mapping the information inside RegistrationBody with a UserDetailsDTO format
-                val userDTO = UserDetailsDTO(
-                    _username = it.username,
-                    _password = encoder.encode(it.password),
-                    _email = it.email,
-                    _roles = setOf(Rolename.CUSTOMER),
-                    isEnable = false
-                )
-
-                // Talking to the service above to create the user
-                try {
-                    val createdUser = userDetailsServiceImpl.createCustomerUser(userDTO)
-
-                    // Return a 201 with inside the user created
-                    return ResponseEntity.status(HttpStatus.CREATED).body(createdUser)
-
-                } catch (error: ErrorResponse) {
-                    throw ResponseStatusException(error.status, error.errorMessage)
-                }
-
-            }
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "The confirmation password and the password don't match"
+            // Mapping the information inside RegistrationBody with a UserDetailsDTO format
+            val userDTO = UserDetailsDTO(
+                _username = data.username,
+                _password = encoder.encode(data.password),
+                _email = data.email,
+                _roles = setOf(Rolename.CUSTOMER),
+                isEnable = false,
+                name = data.name,
+                surname = data.surname,
+                address = data.address
             )
+
+            // Talking to the service above to create the user
+            try {
+                val createdUser = userDetailsServiceImpl.createCustomerUser(userDTO)
+
+                // Return a 201 with inside the user created
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdUser)
+
+            } catch (error: ErrorResponse) {
+                throw ResponseStatusException(error.status, error.errorMessage)
+            }
+
         }
 
-        throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        throw ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "The confirmation password and the password don't match"
+        )
+
     }
 
 
@@ -153,12 +144,11 @@ class UserController(
     }
 
 
-
     @PostMapping("/login")
     suspend fun login(@RequestBody login: Login): Jwt {
 
         // Search if there is a user with the given name
-        val user = users.getUserByUsername(login.username)
+        val user = userDetailsServiceImpl.getUserByUsername(login.username)
 
         user?.let {
             // If the user is not null, we will check if the password provided is the same of the password stored
@@ -198,6 +188,11 @@ class UserController(
             "The combination username and password is not correct"
         )
 
+    }
+
+    @GetMapping("/myInfo")
+    suspend fun myInfo(@AuthenticationPrincipal principal: Principal): UserDetailsDTO? {
+        return userDetailsServiceImpl.getUserByUsername(principal.name)
     }
 
 
@@ -259,17 +254,22 @@ class UserController(
 
 data class Jwt(val token: String)
 
-@ControllerAdvice
-class ValidationHandler {
+// This is the representation of what the user will send during the login phase
+data class Login(
+    @field:NotNull(message = "You must provide an username")
+    val username: String,
+    val password: String
+)
 
-    // This is the exception launched by @Valid annotation. It will catch and format the errors inside
-    @ExceptionHandler(WebExchangeBindException::class)
-    fun handleException(e: WebExchangeBindException): ResponseEntity<List<String?>> {
-        val errors = e.bindingResult
-            .allErrors
-            .stream()
-            .map { obj: ObjectError -> obj.defaultMessage }
-            .collect(Collectors.toList())
-        return ResponseEntity.badRequest().body(errors)
-    }
-}
+data class Profile(val username: String)
+
+data class EnableUser(
+    val username: String,
+    val enable: Boolean
+)
+
+data class ChangePasswordBody(
+    val oldPassword: String,
+    val password: String,
+    val confirmPassword: String
+)

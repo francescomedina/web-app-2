@@ -1,26 +1,20 @@
 package it.polito.wa2.wallet.controllers
 
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
+import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
 import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.WalletDTO
 import it.polito.wa2.wallet.services.WalletServiceImpl
 import org.bson.types.ObjectId
-import org.springframework.beans.TypeMismatchException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.validation.ObjectError
-import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.bind.support.WebExchangeBindException
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
-import java.util.stream.Collectors
-import javax.validation.ConstraintViolationException
 import javax.validation.Valid
 
 
@@ -34,12 +28,12 @@ class WalletController(
     /**
      * GET /wallets/{walletID}
      * Retrieve the wallet identified by WalletID
-     *
+     * @param walletId : id of the wallet
      * @return the requested wallet with the response status 200
      */
     @GetMapping("/{walletId}")
     suspend fun getWalletById(
-        @PathVariable("walletId") walletId: String,
+        @PathVariable("walletId") walletId: ObjectId,
         @RequestHeader(name = "Authorization") jwtToken: String
     ): ResponseEntity<WalletDTO> {
 
@@ -66,7 +60,7 @@ class WalletController(
      * @param walletDTO: Request Body with the id of the user (customer) that want to create the wallet
      * @return 201 (create) or an error message
      * */
-    @PostMapping()
+    @PostMapping
     fun createWallet(
         @RequestBody @Valid walletDTO: WalletDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
@@ -76,9 +70,10 @@ class WalletController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
+            // Ask the service to create the wallet. Throw an exception if the user can't access to such information
             val createdWallet = walletServiceImpl.createWallet(userInfoJWT, walletDTO.customerUsername)
 
-            // Return a 200 with inside the wallet requested
+            // Return a 201 with inside the wallet created
             return ResponseEntity.status(HttpStatus.CREATED).body(createdWallet)
 
         } catch (error: ErrorResponse) {
@@ -92,6 +87,9 @@ class WalletController(
      * POST /wallets/{walletID}/transactions
      * Create a transaction taking the amount of money set in the body from the given wallet (@param walletId) and
      * transferring it to a second walletID defined in the body.
+     * @param senderId : sender walletId (i.e. walletId where take the money to)
+     * @param transactionDTO : information about the transaction ('amount' and 'receiverWalletId'). If the user create
+     * the transaction the amount is negative (he spends money), if the admin create the transaction the amount is positive (he recharges money)
      * @return the created transaction
      */
     @PostMapping("/{walletId}/transactions")
@@ -105,7 +103,10 @@ class WalletController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
+            // Save inside the DTO the senderId because is a pathVariable
             transactionDTO.senderWalletId = senderId
+
+            // Ask the service to create the transaction. Throw an exception if the user can't access to such information
             val createdTransaction = walletServiceImpl.createTransaction(userInfoJWT, transactionDTO)
 
             // Return a 201 with inside the transaction created
@@ -120,7 +121,11 @@ class WalletController(
 
     /**
      * GET /wallets/{walletID}/transactions?from=<dateInMillis>&to=<dateInMillis>
-     * Retrieve a list of transactions regarding a given wallet in a given time frame
+     * Retrieve a list of transactions regarding a given wallet in a given time frame (from start to end)
+     * @param senderId : sender walletId (i.e. walletId where take the money to)
+     * @param start : start date in millis
+     * @param end : end date in millis
+     * @return the transaction of that walletId in that period
      */
     @GetMapping("/{walletId}/transactions")
     suspend fun getTransactionsByPeriod(
@@ -133,7 +138,8 @@ class WalletController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            val transactionDTO = walletServiceImpl.getTransactionsByPeriod(
+            // Ask the transactions to the service. Throw an exception if the user can't access to such information
+            val transactionsDTO = walletServiceImpl.getTransactionsByPeriod(
                 userInfoJWT = userInfoJWT,
                 walletId = senderId,
                 start = Instant.ofEpochMilli(start),
@@ -141,7 +147,7 @@ class WalletController(
             )
 
             // Return a 200 with inside the transactions
-            return ResponseEntity.status(HttpStatus.OK).body(transactionDTO)
+            return ResponseEntity.status(HttpStatus.OK).body(transactionsDTO)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
@@ -153,6 +159,9 @@ class WalletController(
     /**
      * GET /wallets/{walletID}/transactions/{transactionID}
      * Retrieves the details of a single transaction
+     * @param walletId : id of the wallet that belongs to that transaction
+     * @param transactionId : id of the transaction
+     * @return the transaction with that transactionId
      */
     @GetMapping("/{walletId}/transactions/{transactionId}")
     suspend fun getTransaction(
@@ -165,6 +174,7 @@ class WalletController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
+            // Ask the transaction to the service. Throw an exception if the user can't access to such information
             val transactionDTO = walletServiceImpl.getTransactionByIdAndWalletId(
                 userInfoJWT = userInfoJWT,
                 transactionId = transactionId,
@@ -181,35 +191,5 @@ class WalletController(
 
     }
 
-
-}
-
-// Exception class used for send to the controller the correct message and status to generate an appropriate http message
-data class ErrorResponse(val status: HttpStatus, val errorMessage: String) : Throwable()
-
-data class Profile(val username: String)
-
-@ControllerAdvice
-class ValidationHandler {
-
-    // This is the exception launched by @Valid annotation. It will catch and format the errors inside
-    @ExceptionHandler(WebExchangeBindException::class)
-    fun handleException(e: WebExchangeBindException): ResponseEntity<List<String?>> {
-        val errors = e.bindingResult
-            .allErrors
-            .stream()
-            .map { obj: ObjectError -> obj.defaultMessage }
-            .collect(Collectors.toList())
-        return ResponseEntity.badRequest().body(errors)
-    }
-
-
-    @ExceptionHandler(MethodArgumentTypeMismatchException::class, TypeMismatchException::class)
-    fun handleException(e: TypeMismatchException): ResponseEntity<Map<String, String>>? {
-        val errorResponse: MutableMap<String, String> = HashMap()
-        errorResponse["message"] = e.localizedMessage
-        errorResponse["status"] = HttpStatus.BAD_REQUEST.toString()
-        return ResponseEntity(errorResponse, HttpStatus.BAD_REQUEST)
-    }
 }
 

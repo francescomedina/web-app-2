@@ -5,7 +5,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import java.math.BigDecimal
 import java.time.Instant
-import java.util.*
 import javax.validation.constraints.Min
 
 @Document(collection = "transactions")
@@ -20,5 +19,7 @@ data class TransactionEntity(
 
     var senderWalletId: ObjectId,
 
-    var receiverWalletId: ObjectId
+    var receiverWalletId: ObjectId,
+
+    val reason : String = ""
 )

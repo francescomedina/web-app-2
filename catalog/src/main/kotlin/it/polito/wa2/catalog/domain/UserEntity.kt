@@ -1,4 +1,4 @@
-package it.polito.wa2.catalog.persistence
+package it.polito.wa2.catalog.domain
 
 import it.polito.wa2.catalog.security.Rolename
 import org.bson.types.ObjectId
@@ -21,12 +21,14 @@ data class UserEntity(
     val email: String = "",
     var roles: String = "",
 
-    //TODO: Add this fields NAME - SURNAME - DELIVERY ADDRESS
-
     val createdDate: LocalDateTime = LocalDateTime.now(),
 
     // The user can perform or not some operation
     var isEnable: Boolean = false,
+
+    var name: String = "",
+    var surname: String = "",
+    var address: String = ""
 
     ) {
 
