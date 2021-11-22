@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull
 data class RegistrationBody(
     @field:Email(message = "Email is not valid")
     val email: String,
-    //TODO: Validate i DTO
+
     val name: String = "",
     val surname: String = "",
     val address: String = "",

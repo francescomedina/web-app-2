@@ -1,9 +1,11 @@
 package it.polito.wa2.catalog.services
 
+import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.api.exceptions.NotFoundException
-import it.polito.wa2.catalog.controller.UserDetailsDTO
-import it.polito.wa2.catalog.controller.toUserDetailsDTO
-import it.polito.wa2.catalog.controller.toUserEntity
+import it.polito.wa2.catalog.domain.UserEntity
+import it.polito.wa2.catalog.dto.UserDetailsDTO
+import it.polito.wa2.catalog.dto.toUserDetailsDTO
+import it.polito.wa2.catalog.dto.toUserEntity
 import it.polito.wa2.catalog.persistence.EmailVerificationToken
 import it.polito.wa2.catalog.persistence.EmailVerificationTokenRepository
 import it.polito.wa2.catalog.persistence.UserRepository
@@ -32,27 +34,25 @@ class UserDetailsServiceImpl(
 
     @Value("\${app.eureka-server}")
     val host: String? = null
+
     @Value("\${server.port}")
     val port: Int? = 0
 
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')") //TODO: This doesn't work
     /**
      * It will enable/disable the user with such username
-     * @param username
+     * @param username : username of the user to enable or disable
      * @param isEnabled : true (if we want to enable) false (if we want to disable)
      */
     suspend fun setEnabled(username: String, isEnabled: Boolean) {
-        val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
-        user?.let {
-            user.isEnable = isEnabled
-            userRepository.save(user).awaitSingle()
+        // Get the user info
+        val user: UserEntity = userRepository.findByUsername(username).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Username not found")
 
-            return
-        }
-
-        throw NotFoundException("Username not found")
+        // Enable or disable the user
+        user.isEnable = isEnabled
+        userRepository.save(user).awaitSingle()
     }
 
     /**
@@ -97,7 +97,6 @@ class UserDetailsServiceImpl(
             userDetailsDTO.username
         ).token
 
-        //TODO: I didn't understand if putting localhost is correct or not.
         val endpoint = "http://localhost:$port/auth/registrationConfirm?token=$token"
         mailService.sendMessage(userDetailsDTO.email, "Confirm Registration", endpoint)
     }
@@ -112,11 +111,12 @@ class UserDetailsServiceImpl(
 
         username?.let {
 
-            val user = userRepository.findByUsername(it).block()
+            val user = userRepository.findByUsername(it).block() //TODO: Why not awaitsingleornull?
             user?.let {
                 return user.toUserDetailsDTO()
             }
         }
+
         throw UsernameNotFoundException("No user found with username $username")
     }
 
@@ -130,15 +130,10 @@ class UserDetailsServiceImpl(
     suspend fun addRole(username: String, roleName: Rolename) {
 
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Username not found")
 
-        user?.let {
-            user.addRolename(roleName)
-            userRepository.save(user).awaitSingle()
-
-            return
-        }
-
-        throw NotFoundException("User not found")
+        user.addRolename(roleName)
+        userRepository.save(user).awaitSingle()
     }
 
     /**
@@ -150,14 +145,10 @@ class UserDetailsServiceImpl(
     suspend fun removeRole(username: String, roleName: Rolename) {
 
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Username not found")
 
-        user?.let {
-            user.removeRolename(roleName)
-            userRepository.save(user).awaitSingle()
-            return
-        }
-
-        throw NotFoundException("User not found")
+        user.removeRolename(roleName)
+        userRepository.save(user).awaitSingle()
     }
 
     /**
@@ -218,6 +209,19 @@ class UserDetailsServiceImpl(
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
     }
 
+
+    suspend fun updateInfo(username: String, name: String, surname: String, address: String): UserDetailsDTO {
+        val user = userRepository.findByUsername(username).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
+
+        if (name != "") user.name = name
+        if (surname != "") user.surname = surname
+        if (address != "") user.address = address
+
+
+        return userRepository.save(user).awaitSingle().toUserDetailsDTO()
+    }
+
     /**
      * It will enable the user if the token is not expired
      * @return all the information about that token (if not expired)
@@ -231,16 +235,19 @@ class UserDetailsServiceImpl(
             val now = Date.from(Instant.now())
             if (!now.before(it.expiryDate)) {
                 // Token date is before now, so the token is expired
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "This token expired, login again to get another one via email")
+                throw ErrorResponse(
+                    HttpStatus.BAD_REQUEST,
+                    "This token expired, login again to get another one via email"
+                )
             }
             return it
         }
 
         // If we are here, we didn't found such a token
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "Token not found. If you are sure the token is correct, login again to generate a new one")
+        throw ErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            "Token not found. If you are sure the token is correct, login again to generate a new one"
+        )
     }
 
 }
-
-// Exception class used for send to the controller the correct message and status to generate an appropriate http message
-data class ErrorResponse(val status: HttpStatus, val errorMessage: String) : Throwable()

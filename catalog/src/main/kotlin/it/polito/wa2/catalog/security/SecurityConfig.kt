@@ -53,7 +53,8 @@ class SecurityConfig {
             .authorizeExchange()
 
             // Here we will put the route with a specific permission
-            .pathMatchers("/auth/admin/**").hasAuthority("ADMIN")
+            .pathMatchers("/auth/admin/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers("/auth/user/**").hasAuthority(Rolename.CUSTOMER.toString())
             .pathMatchers("/auth/**").permitAll()
 
             // The other exchange (route) are authenticated

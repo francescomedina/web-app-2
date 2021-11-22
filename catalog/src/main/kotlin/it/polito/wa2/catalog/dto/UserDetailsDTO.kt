@@ -1,4 +1,4 @@
-package it.polito.wa2.catalog.controller
+package it.polito.wa2.catalog.dto
 
 import it.polito.wa2.catalog.domain.UserEntity
 import it.polito.wa2.catalog.security.Rolename
@@ -6,7 +6,6 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import java.time.LocalDateTime
-import javax.validation.constraints.NotBlank
 
 // This class will expose information contained in the User entity to other parts of the system
 data class UserDetailsDTO(
