@@ -1,6 +1,7 @@
 version: '2.1'
 
 services:
+
   order:
     build: ./order
     mem_limit: 512m
@@ -133,6 +134,7 @@ services:
     environment:
       - KAFKA_ADVERTISED_HOST_NAME=kafka
       - KAFKA_ADVERTISED_PORT=9092
+      - KAFKA_CREATE_TOPICS="docker-connect-offset:1:1,docker-connect-configs:1:1,docker-connect-status:1:1"
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
     depends_on:
       - zookeeper
@@ -150,3 +152,76 @@ services:
     mem_limit: 512m
     ports:
       - "8761:8761"
+
+  schema-registry:
+    image: "confluentinc/cp-schema-registry:5.4.2"
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - zookeeper
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: '*'
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: 'GET,POST,PUT,OPTIONS'
+
+  postgres:
+    image: postgres:11
+    hostname: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_DB=example-database
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-U", "postgres" ]
+      interval: 5s
+      timeout: 1s
+      retries: 2
+
+  connect:
+    image: confluentinc/cp-kafka-connect:5.4.2
+    depends_on:
+      - zookeeper
+      - kafka
+      - schema-registry
+      - postgres
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
+      CONNECT_PLUGIN_PATH: '/kafka/connect'
+    volumes:
+      - ./debezium-connector-postgres:/kafka/connect/debezium-connector-postgres
+
+  flyway:
+    image: boxfuse/flyway:5-alpine
+    command: -url=jdbc:postgresql://postgres:5432/example-database -schemas=public -user=postgres -password=postgres migrate
+    volumes:
+      - ./db/migration/:/flyway/sql/
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure

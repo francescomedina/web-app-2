@@ -6,6 +6,9 @@ import it.polito.wa2.api.core.order.OrderService
 import it.polito.wa2.api.event.Event
 import it.polito.wa2.api.exceptions.InvalidInputException
 import it.polito.wa2.api.exceptions.NotFoundException
+import it.polito.wa2.order.ExampleEntity
+import it.polito.wa2.order.ExampleEventService
+import it.polito.wa2.order.ExampleService
 import it.polito.wa2.util.http.HttpErrorInfo
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -24,6 +27,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Scheduler
 import java.io.IOException
+import java.util.*
 import java.util.logging.Level
 
 @RestController
@@ -33,12 +37,14 @@ class OrderIntegration @Autowired constructor(
     @Qualifier("publishEventScheduler") publishEventScheduler: Scheduler,
     mapper: ObjectMapper,
     webClientBuilder: WebClient.Builder,
-    streamBridge: StreamBridge
+    streamBridge: StreamBridge,
+    exampleService: ExampleService
 ) : OrderService {
     private val webClient: WebClient
     private val mapper: ObjectMapper
     private val streamBridge: StreamBridge
     private val publishEventScheduler: Scheduler
+    private val exampleService: ExampleService
 
     private val ORDER_SERVICE_URL = "http://order"
     private val WALLET_SERVICE_URL = "http://wallet:8008"
@@ -49,13 +55,12 @@ class OrderIntegration @Autowired constructor(
         this.mapper = mapper
         this.streamBridge = streamBridge
         this.publishEventScheduler = publishEventScheduler
+        this.exampleService = exampleService
     }
 
     override fun createOrder(body: Order?): Mono<Order?>? {
+        exampleService.addExample(ExampleEntity("provaprova"))
         return Mono.fromCallable<Order> {
-            if (body != null) {
-                sendMessage("order-out-0", Event(Event.Type.ORDER_CREATED, body.orderId, body))
-            }
             body
         }.subscribeOn(publishEventScheduler)
     }
