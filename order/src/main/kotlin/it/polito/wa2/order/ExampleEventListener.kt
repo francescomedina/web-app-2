@@ -10,7 +10,7 @@ class ExampleEventListener {
 
     private val logger = LoggerFactory.getLogger(ExampleEventListener::class.java)
 
-    @KafkaListener(topics = ["\${example.topic-name}"])
+    @KafkaListener(topics = ["\${topics.in}"])
     fun listen(message: Message<String>) {
         message.headers.forEach { header, value -> logger.info("Header $header: $value") }
         logger.info("Received: ${message.payload}")

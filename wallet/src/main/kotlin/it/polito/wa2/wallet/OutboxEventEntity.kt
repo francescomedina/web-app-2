@@ -1,4 +1,4 @@
-package it.polito.wa2.order
+package it.polito.wa2.wallet
 
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType
 import org.hibernate.annotations.Type
@@ -13,7 +13,7 @@ import javax.persistence.Id
 import javax.persistence.Table
 
 @Entity
-@Table(name = "order_outbox_event", schema = "public")
+@Table(name = "wallet_outbox_event", schema = "public")
 @TypeDef(name = "jsonb", typeClass = JsonBinaryType::class)
 class OutboxEventEntity{
         @Id

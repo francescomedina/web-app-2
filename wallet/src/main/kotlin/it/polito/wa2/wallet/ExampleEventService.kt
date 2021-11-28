@@ -1,4 +1,4 @@
-package it.polito.wa2.order
+package it.polito.wa2.wallet
 
 import brave.Tracer
 import brave.propagation.B3SingleFormat
@@ -10,15 +10,13 @@ import org.springframework.stereotype.Service
 class ExampleEventService(
         private val outboxEventEntityRepository: OutboxEventEntityRepository,
         private val objectMapper: ObjectMapper,
-        private val tracer: Tracer,
-        @Value("\${topics.out}")
-        private val exampleTopicName: String
+        private val tracer: Tracer
 ) {
 
-    fun publishEvent(event: ExampleEvent) {
+    fun publishEvent(topicTarget: String, event: ExampleEvent) {
         val traceId = B3SingleFormat.writeB3SingleFormat(tracer.currentSpan().context())
         val outboxEvent = OutboxEventEntity(
-                destinationTopic = exampleTopicName,
+                destinationTopic = topicTarget,
                 aggregateId = event.exampleId,
                 type = event.javaClass.simpleName,
                 payload = objectMapper.writeValueAsString(event),

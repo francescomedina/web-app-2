@@ -31,64 +31,91 @@ spring.data.mongodb:
 
 spring.cloud.function.definition: checkAvailability;decrementQuantity
 
-spring.cloud.stream:
-  defaultBinder: kafka
-  default.contentType: application/json
-  bindings:
-    checkAvailability-in-0:
-      destination: order-created
-      group: checkAvailabilityGroup
-      consumer:
-        maxAttempts: 3
-        backOffInitialInterval: 500
-        backOffMaxInterval: 1000
-        backOffMultiplier: 2.0
-    checkAvailability-out-0:
-      destination: warehouse-checked
-      producer:
-        required-groups: auditGroup
-    decrementQuantity-in-0:
-      destination: wallet-response
-      group: walletResponseGroup
-      consumer:
-        maxAttempts: 3
-        backOffInitialInterval: 500
-        backOffMaxInterval: 1000
-        backOffMultiplier: 2.0
-    decrementQuantity-out-0:
-      destination: warehouse-decremented
-      producer:
-        required-groups: auditGroup
-#    messageProcessor-in-0:
-#      destination: wallet-response,order-created
-#      group: warehouseGroup
+#spring.cloud.stream:
+#  defaultBinder: kafka
+#  default.contentType: application/json
+#  bindings:
+#    checkAvailability-in-0:
+#      destination: order-created
+#      group: checkAvailabilityGroup
 #      consumer:
 #        maxAttempts: 3
 #        backOffInitialInterval: 500
 #        backOffMaxInterval: 1000
 #        backOffMultiplier: 2.0
-#    messageProcessor-out-0:
+#    checkAvailability-out-0:
 #      destination: warehouse-checked
 #      producer:
 #        required-groups: auditGroup
-#    messageProcessor-out-1:
-#      destination: warehouse-checked
+#    decrementQuantity-in-0:
+#      destination: wallet-response
+#      group: walletResponseGroup
+#      consumer:
+#        maxAttempts: 3
+#        backOffInitialInterval: 500
+#        backOffMaxInterval: 1000
+#        backOffMultiplier: 2.0
+#    decrementQuantity-out-0:
+#      destination: warehouse-decremented
 #      producer:
 #        required-groups: auditGroup
-  kafka:
-    binder:
-      brokers: 127.0.0.1
-      defaultBrokerPort: 9092
-    bindings:
-#      messageProcessor-in-0:
+##    messageProcessor-in-0:
+##      destination: wallet-response,order-created
+##      group: warehouseGroup
+##      consumer:
+##        maxAttempts: 3
+##        backOffInitialInterval: 500
+##        backOffMaxInterval: 1000
+##        backOffMultiplier: 2.0
+##    messageProcessor-out-0:
+##      destination: warehouse-checked
+##      producer:
+##        required-groups: auditGroup
+##    messageProcessor-out-1:
+##      destination: warehouse-checked
+##      producer:
+##        required-groups: auditGroup
+#  kafka:
+#    binder:
+#      brokers: 127.0.0.1
+#      defaultBrokerPort: 9092
+#    bindings:
+##      messageProcessor-in-0:
+##        consumer:
+##          enableDlq: true
+#      checkAvailability-in-0:
 #        consumer:
 #          enableDlq: true
-      checkAvailability-in-0:
-        consumer:
-          enableDlq: true
-      decrementQuantity-in-0:
-        consumer:
-          enableDlq: true
+#      decrementQuantity-in-0:
+#        consumer:
+#          enableDlq: true
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://postgres:5432/example-database
+  jpa:
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+  kafka:
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: warehouse-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+topics:
+  in: order.topic
+  out: warehouse.topic
+  in-error: wallet-error.topic
+  out-error: warehouse-error.topic
 
 logging:
   level:

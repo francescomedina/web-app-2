@@ -61,14 +61,19 @@ spring:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     consumer:
-      group-id: example-consumer-group-id
+      group-id: order-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-example.topic-name: example.topic
+topics:
+  in: wallet.topic
+  out: order.topic
 
 spring.data.mongodb:
   host: localhost

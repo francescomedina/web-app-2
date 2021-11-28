@@ -1,4 +1,4 @@
-package it.polito.wa2.order
+package it.polito.wa2.warehouse
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -12,9 +12,9 @@ class ExampleService(
 ) {
 
     @Transactional
-    fun addExample(example: ExampleEntity) {
+    fun addExample(topicName: String, example: ExampleEntity) {
         exampleEntityRepository.save(example)
-        exampleEventService.publishEvent(ExampleEvent(example.id, "Order added"))
+        exampleEventService.publishEvent(topicName, ExampleEvent(example.id, "Warehouse added"))
     }
 
 }

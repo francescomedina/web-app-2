@@ -11,7 +11,7 @@ curl -X PUT 'http://localhost:8083/connectors/outbox-connector/config' \
     "database.dbname" : "example-database",
     "database.server.name": "outbox-test-postgres-server",
     "schema.include.list": "public",
-    "table.include.list" : "public.outbox_event",
+    "table.include.list" : "public.order_outbox_event,public.warehouse_outbox_event,public.wallet_outbox_event",
     "tombstones.on.delete" : "false",
     "transforms" : "outbox",
     "transforms.outbox.type" : "io.debezium.transforms.outbox.EventRouter",

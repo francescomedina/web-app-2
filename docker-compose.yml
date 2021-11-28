@@ -5,6 +5,7 @@ services:
   order:
     build: ./order
     mem_limit: 512m
+    restart: always
     ports:
       - "5004:5004"
     environment:
@@ -15,6 +16,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
 
 #  order-p1:
 #    build: ./order
@@ -31,6 +36,7 @@ services:
   wallet:
     build: ./wallet
     mem_limit: 512m
+    restart: always
     ports:
       - "5003:5003"
     environment:
@@ -41,6 +47,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
 
 #  wallet-p1:
 #    build: ./wallet
@@ -56,6 +66,7 @@ services:
   warehouse:
     build: ./warehouse
     mem_limit: 512m
+    restart: always
     ports:
       - "5002:5002"
     environment:
@@ -66,6 +77,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
 
 #  warehouse-p1:
 #    build: ./warehouse
@@ -81,6 +96,7 @@ services:
   catalog:
     build: ./catalog
     mem_limit: 512m
+    restart: always
     ports:
       - "8008:8008"
       - "5005:5005"
@@ -152,6 +168,11 @@ services:
     mem_limit: 512m
     ports:
       - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://eureka:8761" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   schema-registry:
     image: "confluentinc/cp-schema-registry:5.4.2"

@@ -33,42 +33,69 @@ spring.data.mongodb:
 
 spring.cloud.function.definition: processPayment
 
-spring.cloud.stream:
-  defaultBinder: kafka
-  default.contentType: application/json
-  bindings:
-    processPayment-in-0:
-      destination: warehouse-checked
-      group: processPaymentGroup
-      consumer:
-        maxAttempts: 3
-        backOffInitialInterval: 500
-        backOffMaxInterval: 1000
-        backOffMultiplier: 2.0
-    processPayment-out-0:
-      destination: wallet-response
-      producer:
-        required-groups: auditGroup
-#    messageProcessor-in-0:
+#spring.cloud.stream:
+#  defaultBinder: kafka
+#  default.contentType: application/json
+#  bindings:
+#    processPayment-in-0:
 #      destination: warehouse-checked
-#      group: walletGroup
+#      group: processPaymentGroup
 #      consumer:
 #        maxAttempts: 3
 #        backOffInitialInterval: 500
 #        backOffMaxInterval: 1000
 #        backOffMultiplier: 2.0
-#    messageProcessor-out-0:
+#    processPayment-out-0:
 #      destination: wallet-response
 #      producer:
 #        required-groups: auditGroup
+##    messageProcessor-in-0:
+##      destination: warehouse-checked
+##      group: walletGroup
+##      consumer:
+##        maxAttempts: 3
+##        backOffInitialInterval: 500
+##        backOffMaxInterval: 1000
+##        backOffMultiplier: 2.0
+##    messageProcessor-out-0:
+##      destination: wallet-response
+##      producer:
+##        required-groups: auditGroup
+#  kafka:
+#    binder:
+#      brokers: 127.0.0.1
+#      defaultBrokerPort: 9092
+#    bindings:
+#      processPayment-in-0:
+#        consumer:
+#          enableDlq: true
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://postgres:5432/example-database
+  jpa:
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
   kafka:
-    binder:
-      brokers: 127.0.0.1
-      defaultBrokerPort: 9092
-    bindings:
-      processPayment-in-0:
-        consumer:
-          enableDlq: true
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: wallet-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+topics:
+  in: warehouse.topic
+  out: wallet.topic
+  in-error: warehouse-error.topic
+  out-error: wallet-error.topic
 
 logging:
   level:
