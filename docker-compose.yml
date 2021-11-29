@@ -208,10 +208,14 @@ services:
   connect:
     image: confluentinc/cp-kafka-connect:5.4.2
     depends_on:
-      - zookeeper
-      - kafka
-      - schema-registry
-      - postgres
+      zookeeper:
+        condition: service_started
+      schema-registry:
+        condition: service_started
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     ports:
       - "8083:8083"
     environment:
@@ -236,6 +240,16 @@ services:
       CONNECT_PLUGIN_PATH: '/kafka/connect'
     volumes:
       - ./debezium-connector-postgres:/kafka/connect/debezium-connector-postgres
+
+  register-connector:
+    image: confluentinc/cp-kafka-connect:5.4.2
+    depends_on:
+      connect:
+        condition: service_started
+    volumes:
+      - ./register-debezium-connector.sh:/register-debezium-connector.sh
+    entrypoint: sh -c "/register-debezium-connector.sh"
+    restart: "no"
 
   flyway:
     image: boxfuse/flyway:5-alpine
