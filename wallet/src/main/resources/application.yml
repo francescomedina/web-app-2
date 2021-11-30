@@ -13,8 +13,6 @@ application:
     jwtHeader: Authorization
     jwtHeaderStart: Bearer
 
-
-
 eureka:
   client:
     serviceUrl:

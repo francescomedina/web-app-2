@@ -8,19 +8,16 @@ import javax.validation.constraints.NotBlank
 
 data class OrderDTO(
     var id: ObjectId? = null,
-
-    @field:DecimalMin(value = "0.0", message="Amount must be positive")
-    var amount: BigDecimal = BigDecimal(0.0),
-
-    // This is the only field required
-    @field:NotBlank(message = "CustomerUsername is required")
-    val customerUsername: String = "",
+    @field:NotBlank(message = "Status is required")
+    var status: String? = null,
+    @field:NotBlank(message = "Buyer is required")
+    var buyer: String? = null,
 )
 
 fun OrderEntity.toOrderDTO(): OrderDTO {
     return OrderDTO(
         id = id,
-        amount = amount,
-        customerUsername = customerUsername
+        status = status,
+        buyer = buyer
     )
 }

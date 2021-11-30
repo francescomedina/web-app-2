@@ -24,20 +24,20 @@ class OrderController(
 
     /**
      * GET /orders/{orderID}
-     * Retrieve the wallet identified by OrderID
-     * @param walletId : id of the order
+     * Retrieve the order identified by OrderID
+     * @param orderId : id of the order
      * @return the requested order with the response status 200
      */
     @GetMapping("/")
     suspend fun getOrders(
         @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<Flux<OrderDTO?>> {
+    ): ResponseEntity<Flux<OrderDTO>> {
 
         try {
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            // Ask the wallet information to the service. Throw an exception if the user can't access to such information
+            // Ask the order information to the service. Throw an exception if the user can't access to such information
             val orders = orderServiceImpl.getOrders(userInfoJWT)
 
             // Return a 200 with inside the order requested
@@ -52,8 +52,8 @@ class OrderController(
 
     /**
      * GET /orders/{orderID}
-     * Retrieve the wallet identified by OrderID
-     * @param walletId : id of the order
+     * Retrieve the order identified by OrderID
+     * @param orderId : id of the order
      * @return the requested order with the response status 200
      */
     @GetMapping("/{orderId}")
@@ -66,7 +66,7 @@ class OrderController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            // Ask the wallet information to the service. Throw an exception if the user can't access to such information
+            // Ask the order information to the service. Throw an exception if the user can't access to such information
             val requestedOrder: OrderDTO = orderServiceImpl.getOrderById(userInfoJWT, orderId)
 
             // Return a 200 with inside the order requested
@@ -81,8 +81,8 @@ class OrderController(
 
     /**
      * POST /orders
-     * Create a new wallet for a given customer. The wallet will have 0 money at the beginning.
-     * @param walletDTO: Request Body with the id of the user (customer) that want to create the wallet
+     * Create a new order for a given customer. The order will have 0 money at the beginning.
+     * @param orderDTO: Request Body with the id of the user (customer) that want to create the order
      * @return 201 (create) or an error message
      * */
     @PostMapping
@@ -95,15 +95,35 @@ class OrderController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            // Ask the service to create the wallet. Throw an exception if the user can't access to such information
-            val createdOrder = orderServiceImpl.createOrder(userInfoJWT, orderDTO.customerUsername)
+            val createdOrder = orderDTO.buyer?.let { orderServiceImpl.createOrder(userInfoJWT, it) }
 
-            // Return a 201 with inside the wallet created
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
             throw ResponseStatusException(error.status, error.errorMessage)
         }
+    }
+
+    @DeleteMapping("/{orderId}")
+    suspend fun deleteOrder(
+        @PathVariable("orderId") orderId: ObjectId,
+        @RequestHeader(name = "Authorization") jwtToken: String
+    ): ResponseEntity<Mono<Void>> {
+        try {
+            // Extract userInfo from JWT
+            val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
+
+            // Ask the wallet information to the service. Throw an exception if the user can't access to such information
+            val requestedOrder = orderServiceImpl.deleteOrder(userInfoJWT, orderId)
+
+            // Return a 200 with inside the order requested
+            return ResponseEntity.status(HttpStatus.OK).body(requestedOrder)
+
+        } catch (error: ErrorResponse) {
+            // There was an error. Return an error message
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
+
     }
 }

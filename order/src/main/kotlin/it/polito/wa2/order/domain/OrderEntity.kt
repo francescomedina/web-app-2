@@ -11,11 +11,7 @@ import javax.validation.constraints.Min
 @Document(collection = "order")
 data class OrderEntity (
     @Id
-    val id: ObjectId? = ObjectId.get(),
-
-    var customerUsername: String = "",
-
-    @Min(0) //Amount greater or equal to 0
-    var amount: BigDecimal = BigDecimal(0)
-
+    var id: ObjectId? = ObjectId.get(),
+    var status: String? = null,
+    var buyer: String? = null,
 )

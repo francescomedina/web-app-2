@@ -5,3 +5,5 @@ application:
     jwtExpirationMs: 1000000
     jwtHeader: Authorization
     jwtHeaderStart: Bearer
+
+server.port: 7000

@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("org.springframework.boot") version "2.5.4"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    kotlin("kapt") version "1.5.30"
     kotlin("jvm") version "1.5.21"
     kotlin("plugin.spring") version "1.5.21"
 }
@@ -36,10 +35,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
     implementation("org.springframework.cloud:spring-cloud-stream")
-
-    implementation("org.mapstruct:mapstruct-jdk8:1.3.1.Final")
-    kapt("org.mapstruct:mapstruct-processor:1.3.1.Final")
-
 
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:2.5.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")

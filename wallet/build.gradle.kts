@@ -5,7 +5,6 @@ plugins {
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.5.31"
     kotlin("plugin.spring") version "1.5.31"
-    kotlin("kapt") version "1.5.30"
 }
 
 group = "it.polito.wa2"
@@ -44,10 +43,6 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-stream")
     implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
     implementation("org.springdoc:springdoc-openapi-webflux-ui:1.5.9")
-
-    implementation("org.mapstruct:mapstruct-jdk8:1.3.1.Final")
-    kapt("org.mapstruct:mapstruct-processor:1.3.1.Final")
-
 
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:2.5.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")

@@ -1,4 +1,4 @@
-server.port: 7001
+server.port: 7002
 server.error.include-message: always
 
 spring.application.name: order

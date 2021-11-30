@@ -101,6 +101,14 @@ spring.application.name: catalog
 
 app.eureka-server: localhost
 
+# JWT configuration
+application:
+  jwt:
+    jwtSecret: tNO+KhVrTj3B4q0+SEwz/NSvZq7y577jOjvY4uPgAR4=
+    jwtExpirationMs: 1000000
+    jwtHeader: Authorization
+    jwtHeaderStart: Bearer
+
 eureka:
   client:
     serviceUrl:
@@ -111,22 +119,22 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.cloud.stream:
-  defaultBinder: kafka
-  default.contentType: application/json
-  bindings:
-    catalog-out-0:
-      destination: catalog
-      producer:
-        required-groups: auditGroup
-    order-out-0:
-      destination: order
-      producer:
-        required-groups: auditGroup
-
-spring.cloud.stream.kafka.binder:
-  brokers: 127.0.0.1
-  defaultBrokerPort: 9092
+#spring.cloud.stream:
+#  defaultBinder: kafka
+#  default.contentType: application/json
+#  bindings:
+#    catalog-out-0:
+#      destination: catalog
+#      producer:
+#        required-groups: auditGroup
+#    order-out-0:
+#      destination: order
+#      producer:
+#        required-groups: auditGroup
+#
+#spring.cloud.stream.kafka.binder:
+#  brokers: 127.0.0.1
+#  defaultBrokerPort: 9092
 
 
 logging:

@@ -10,7 +10,9 @@ import java.time.Instant
 import java.util.*
 
 interface OrderService {
-    fun createOrder(userInfoJWT: UserInfoJWT, username: String): Mono<OrderDTO>
+    fun createOrder(userInfoJWT: UserInfoJWT, buyerId: String): Mono<OrderDTO>
+    suspend fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void>
+    fun updateOrder(userInfoJWT: UserInfoJWT, username: String): Mono<OrderDTO>
     suspend fun getOrderById(userInfoJWT: UserInfoJWT, orderId: ObjectId): OrderDTO
-    suspend fun getOrders(userInfoJWT: UserInfoJWT, orderId: ObjectId): Flux<OrderDTO>
+    suspend fun getOrders(userInfoJWT: UserInfoJWT): Flux<OrderDTO>
 }
