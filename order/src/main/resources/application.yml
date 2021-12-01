@@ -9,7 +9,7 @@ app.eureka-server: localhost
 application:
   jwt:
     jwtSecret: tNO+KhVrTj3B4q0+SEwz/NSvZq7y577jOjvY4uPgAR4=
-    jwtExpirationMs: 1000000
+    jwtExpirationMs: 10000000000
     jwtHeader: Authorization
     jwtHeaderStart: Bearer
 

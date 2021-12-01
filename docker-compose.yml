@@ -131,6 +131,8 @@ services:
       interval: 5s
       timeout: 2s
       retries: 60
+    volumes:
+      - /mongo-volume:/data/db
 
   kowl:
     image: quay.io/cloudhut/kowl:master-d782eab

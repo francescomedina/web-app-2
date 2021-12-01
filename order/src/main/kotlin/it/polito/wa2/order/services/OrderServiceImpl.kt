@@ -8,6 +8,7 @@ import it.polito.wa2.order.ExampleEventService
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.repositories.OrderRepository
+import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.bson.types.ObjectId
@@ -34,10 +35,29 @@ class OrderServiceImpl(
         if (userInfoJWT.username == buyerId) {
             val order = OrderEntity(buyer = userInfoJWT.username)
 
-            return orderRepository.save(order).map {
-                exampleEventService.publishEvent(ExampleEvent(UUID.fromString(it.id.toString()), "ORDER_CREATED"))
-                it.toOrderDTO()
+            return Mono.from {
+                suspend {
+                    orderRepository.save(order)
+                        .flatMap {
+                            exampleEventService.publishEvent(
+                                ExampleEvent(
+                                    UUID.fromString(it.id.toString()),
+                                    "ORDER_CREATED"
+                                )
+                            )
+                            Mono.just(it)
+                        }
+                        .flatMap {
+                            Mono.just(it.toOrderDTO())
+                        }.awaitSingle()
+                }
             }
+
+//            return orderRepository.save(order)
+//                .flatMap { od ->
+//                    exampleEventService.publishEvent(ExampleEvent(UUID.fromString(od.id.toString()), "ORDER_CREATED"))
+//                    od
+//                }.map { it.toOrderDTO() }
         }
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")

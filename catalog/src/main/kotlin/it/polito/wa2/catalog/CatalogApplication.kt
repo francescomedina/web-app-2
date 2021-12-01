@@ -56,7 +56,7 @@ class CatalogApplication {
                                 it -> it.setFallbackUri("forward:/order-failure")
                         }
 
-                        f.rewritePath("/order-composite", "/")
+                        f.rewritePath("/order-composite", "/orders")
 
                     }
 

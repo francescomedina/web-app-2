@@ -1,4 +1,4 @@
-curl -X PUT 'http://connect:8083/connectors/outbox-connector/config' \
+curl -X PUT 'http://localhost:8083/connectors/outbox-connector/config' \
 -H 'Content-Type: application/json' \
 -d '{
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
