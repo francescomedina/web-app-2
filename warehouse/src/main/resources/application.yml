@@ -112,8 +112,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 topics:
-  in: order.topic
-  out: warehouse.topic
+  in: event.order-db.order
+  out: event.warehouse.topic
   in-error: wallet-error.topic
   out-error: warehouse-error.topic
 

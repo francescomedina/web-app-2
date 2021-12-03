@@ -43,6 +43,6 @@ curl --location --request POST 'http://localhost:8083/connectors' \
   "config": {
     "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
     "mongodb.hosts": "rs0/mongod:27017",
-    "mongodb.name": "libraryMongo"
+    "mongodb.name": "event"
   }
 }'
