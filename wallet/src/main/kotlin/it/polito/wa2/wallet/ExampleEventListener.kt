@@ -20,11 +20,11 @@ class ExampleEventListener @Autowired constructor(
     }
 
     @KafkaListener(topics = ["\${topics.in}"])
-    fun listen(message: Message<String>) {
+    suspend fun listen(message: Message<String>) {
         message.headers.forEach { header, value -> logger.info("Header $header: $value") }
         logger.info("Received: ${message.payload}")
 
-//        walletService.processPayment(ExampleEntity("Credit Reserved"))
+//        walletService.createTransaction()
     }
 
 //    @KafkaListener(topics = ["\${topics.in-error}"])
