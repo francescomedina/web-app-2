@@ -24,10 +24,6 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.data.mongodb:
-  host: localhost
-  port: 27017
-  database: wallet-db
 
 spring.cloud.function.definition: processPayment
 
@@ -88,6 +84,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    mongodb:
+      database: wallet-db
+      host: mongod
+      port: 27017
 
 topics:
   in: warehouse.topic
@@ -109,8 +110,6 @@ spring.config.activate.on-profile: docker
 server.port: 8008
 
 app.eureka-server: eureka
-
-spring.data.mongodb.host: mongodb
 
 spring.cloud.stream:
   kafka:

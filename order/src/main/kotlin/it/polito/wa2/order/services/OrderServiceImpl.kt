@@ -4,13 +4,13 @@ import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.order.ExampleEntity
 import it.polito.wa2.order.ExampleEvent
-import it.polito.wa2.order.ExampleEventService
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.repositories.OrderRepository
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -21,7 +21,6 @@ import java.util.*
 @Service
 class OrderServiceImpl(
     val orderRepository: OrderRepository,
-    val exampleEventService: ExampleEventService
 ) : OrderService {
 
     /**
@@ -30,34 +29,20 @@ class OrderServiceImpl(
      * @param username : username associated to that order
      * @return the order created
      */
-    override fun createOrder(userInfoJWT: UserInfoJWT, buyerId: String): Mono<OrderDTO> {
+    override suspend fun createOrder(userInfoJWT: UserInfoJWT, buyerId: String): Mono<OrderDTO> {
 
         if (userInfoJWT.username == buyerId) {
             val order = OrderEntity(buyer = userInfoJWT.username)
 
-            return Mono.from {
-                suspend {
-                    orderRepository.save(order)
-                        .flatMap {
-                            exampleEventService.publishEvent(
-                                ExampleEvent(
-                                    UUID.fromString(it.id.toString()),
-                                    "ORDER_CREATED"
-                                )
-                            )
-                            Mono.just(it)
-                        }
-                        .flatMap {
-                            Mono.just(it.toOrderDTO())
-                        }.awaitSingle()
-                }
-            }
 
-//            return orderRepository.save(order)
-//                .flatMap { od ->
-//                    exampleEventService.publishEvent(ExampleEvent(UUID.fromString(od.id.toString()), "ORDER_CREATED"))
-//                    od
-//                }.map { it.toOrderDTO() }
+            val orderCreated = orderRepository.save(order).onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
+            }.awaitSingleOrNull()
+//            orderCreated?.let {
+//                exampleService.addExample(ExampleEntity("provaprova"))
+////                exampleEventService.publishEvent(ExampleEvent(it.id.toString(), "ORDER_CREATED"))
+//                return mono { it.toOrderDTO() }
+//            }
         }
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
@@ -71,7 +56,7 @@ class OrderServiceImpl(
             val orderEntity = OrderEntity(id = orderId)
 
             return orderRepository.delete(orderEntity).map {
-                exampleEventService.publishEvent(ExampleEvent(UUID.fromString(order.id.toString()), "ORDER_DELETED"))
+//                exampleEventService.publishEvent(ExampleEvent(order.id.toString(), "ORDER_DELETED"))
                 it
             }
         }

@@ -78,15 +78,16 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    mongodb:
+      database: order-db
+      host: mongod
+      port: 27017
 
 topics:
   in: wallet.topic
   out: order.topic
 
-spring.data.mongodb:
-  host: localhost
-  port: 27017
-  database: order-db
 
 logging:
   level:
@@ -103,7 +104,7 @@ server.port: 8008
 
 app.eureka-server: eureka
 
-spring.data.mongodb.host: mongodb
+#spring.data.mongodb.host: mongodb
 
 spring.cloud.stream:
   kafka:

@@ -12,7 +12,7 @@ import javax.persistence.Table
 @Table(name = "example", schema = "public")
 class ExampleEntity {
         @Id
-        val id: UUID = UUID.randomUUID()
+        val id: String = ""
         val data: String?
 
         constructor() {

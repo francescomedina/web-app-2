@@ -132,7 +132,12 @@ server.port: 8008
 
 app.eureka-server: eureka
 
-spring.data.mongodb.host: mongodb
+spring:
+  data:
+    mongodb:
+      database: warehouse-db
+      host: mongod
+      port: 27017
 
 spring.cloud.stream:
   kafka:

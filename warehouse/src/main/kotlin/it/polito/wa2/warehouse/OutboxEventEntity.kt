@@ -22,7 +22,7 @@ class OutboxEventEntity{
         val timestamp: Instant = now()
 
         @Column(name = "aggregate_id", nullable = false)
-        val aggregateId: UUID
+        val aggregateId: String
 
         @Column(name = "destination_topic", nullable = false)
         val destinationTopic: String
@@ -37,14 +37,14 @@ class OutboxEventEntity{
         val traceId: String
 
         constructor() {
-                this.aggregateId = randomUUID()
+                this.aggregateId = ""
                 this.destinationTopic = ""
                 this.payload = ""
                 this.type = ""
                 this.traceId = ""
         }
 
-        constructor(aggregateId: UUID, destinationTopic: String, payload: String, type: String, traceId: String) {
+        constructor(aggregateId: String, destinationTopic: String, payload: String, type: String, traceId: String) {
                 this.destinationTopic = destinationTopic
                 this.payload = payload
                 this.type = type

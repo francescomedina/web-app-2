@@ -1,12 +1,12 @@
 create table example(
-                        id uuid primary key,
+                        id varchar(256) primary key,
                         data varchar(256) not null
 );
 
 create table order_outbox_event(
                              id uuid primary key,
                              timestamp timestamptz not null,
-                             aggregate_id uuid not null,
+                             aggregate_id varchar(256) not null,
                              destination_topic varchar(256) not null,
                              payload jsonb not null,
                              type varchar(256) not null,
@@ -15,7 +15,7 @@ create table order_outbox_event(
 create table warehouse_outbox_event(
                              id uuid primary key,
                              timestamp timestamptz not null,
-                             aggregate_id uuid not null,
+                             aggregate_id varchar(256) not null,
                              destination_topic varchar(256) not null,
                              payload jsonb not null,
                              type varchar(256) not null,
@@ -24,7 +24,7 @@ create table warehouse_outbox_event(
 create table wallet_outbox_event(
                              id uuid primary key,
                              timestamp timestamptz not null,
-                             aggregate_id uuid not null,
+                             aggregate_id varchar(256) not null,
                              destination_topic varchar(256) not null,
                              payload jsonb not null,
                              type varchar(256) not null,

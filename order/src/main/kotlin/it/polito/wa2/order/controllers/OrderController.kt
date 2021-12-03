@@ -86,7 +86,7 @@ class OrderController(
      * @return 201 (create) or an error message
      * */
     @PostMapping
-    fun createOrder(
+    suspend fun createOrder(
         @RequestBody @Valid orderDTO: OrderDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
     ): ResponseEntity<Mono<OrderDTO>> {
