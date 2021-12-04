@@ -6,9 +6,9 @@ import org.springframework.messaging.Message
 import org.springframework.stereotype.Component
 
 @Component
-class ExampleEventListener {
+class OrderEventListener {
 
-    private val logger = LoggerFactory.getLogger(ExampleEventListener::class.java)
+    private val logger = LoggerFactory.getLogger(OrderEventListener::class.java)
 
     @KafkaListener(topics = ["\${topics.in}"])
     fun listen(message: Message<String>) {

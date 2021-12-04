@@ -76,7 +76,7 @@ class WalletServiceImpl(
      * @return the new transaction created
      */
     @Transactional // Since we update multiple documents we annotated with transactional
-    override suspend fun createTransaction(userInfoJWT: UserInfoJWT, transactionDTO: TransactionDTO): TransactionDTO {
+    override suspend fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): TransactionDTO {
         // Check if the senderWalletId and the receiverWalletId are the same
         if (transactionDTO.senderWalletId.toString() == transactionDTO.receiverWalletId.toString()) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "The transaction has the same sender and receiver walletId")
@@ -85,7 +85,7 @@ class WalletServiceImpl(
         // Check that amount is correct; must be not 0; if the user is normal (non admin) can be only negative transaction
         if (transactionDTO.amount == null || transactionDTO.amount.abs().setScale(2) == BigDecimal("0.0").setScale(2) ) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "The transaction cannot be with amount 0 euro")
-        } else if (!userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
+        } else if (userInfoJWT!=null && !userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Transaction cannot be with a positive amount (amount must be negative)")
         }
 
@@ -97,7 +97,7 @@ class WalletServiceImpl(
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Receiver wallet not found")
 
         // Check if the owner of the senderWallet is the same of the JWT
-        if (senderWallet.customerUsername != userInfoJWT.username) {
+        if (!trusted && userInfoJWT!=null && senderWallet.customerUsername != userInfoJWT.username) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Only the wallet owner can create transaction")
         }
 

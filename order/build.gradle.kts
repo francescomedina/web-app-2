@@ -36,11 +36,8 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
     implementation("org.springframework.cloud:spring-cloud-stream")
 
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa:2.5.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")
     implementation("org.springframework.kafka:spring-kafka:2.7.6")
-    implementation("org.postgresql:postgresql:42.2.23")
-    implementation("com.vladmihalcea:hibernate-types-52:2.12.1")
     implementation("org.springframework.cloud:spring-cloud-starter-sleuth:3.0.3")
 
 

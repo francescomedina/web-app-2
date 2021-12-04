@@ -36,13 +36,35 @@
 #        "database.history.kafka.bootstrap.servers" : "kafka:9092"
 #    }
 #}
+#curl --location --request POST 'http://localhost:8083/connectors' \
+#--header 'Content-Type: application/json' \
+#--data-raw '{
+#  "name": "mongo-outbox-connector",
+#  "config": {
+#    "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
+#    "mongodb.hosts": "rs0/mongod:27017",
+#    "mongodb.name": "event"
+#  }
+#}'
 curl --location --request POST 'http://localhost:8083/connectors' \
 --header 'Content-Type: application/json' \
 --data-raw '{
   "name": "mongo-connector",
   "config": {
-    "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
-    "mongodb.hosts": "rs0/mongod:27017",
-    "mongodb.name": "event"
+    "connector.class" : "io.debezium.connector.mongodb.MongoDbConnector",
+    "tasks.max" : "1",
+    "mongodb.hosts" : "rs0/mongod:27017",
+    "mongodb.name" : "event",
+    "database.include.list" : "order-db,warehouse-db,wallet-db",
+    "collection.include.list": "order-db.outbox-event,warehouse-db.outbox-event,wallet-db.outbox-event",
+    "database.history.kafka.bootstrap.servers" : "kafka:9092",
+    "transforms" : "outbox",
+    "transforms.outbox.type" : "io.debezium.connector.mongodb.transforms.outbox.MongoEventRouter",
+    "transforms.outbox.route.topic.replacement" : "${routedByValue}.events",
+    "transforms.outbox.collection.expand.json.payload" : "true",
+    "transforms.outbox.collection.field.event.timestamp" : "timestamp",
+    "transforms.outbox.collection.fields.additional.placement" : "type:header:eventType",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter"
   }
 }'

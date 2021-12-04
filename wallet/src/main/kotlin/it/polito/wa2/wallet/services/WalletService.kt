@@ -14,7 +14,7 @@ import java.util.*
 interface WalletService {
     fun createWallet(userInfoJWT: UserInfoJWT, username: String): Mono<WalletDTO>
     suspend fun getWalletById(userInfoJWT: UserInfoJWT, walletId: ObjectId): WalletDTO
-    suspend fun createTransaction(userInfoJWT: UserInfoJWT,transactionDTO: TransactionDTO): TransactionDTO?
+    suspend fun createTransaction(userInfoJWT: UserInfoJWT?,transactionDTO: TransactionDTO, trusted: Boolean = false): TransactionDTO?
 
     suspend fun getTransactionsByPeriod(userInfoJWT: UserInfoJWT, walletId: ObjectId, start: Instant, end: Instant): Flux<TransactionEntity?>
     suspend fun getTransactionByIdAndWalletId(userInfoJWT: UserInfoJWT, transactionId: ObjectId, walletId: ObjectId): TransactionDTO

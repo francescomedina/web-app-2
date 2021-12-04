@@ -1,6 +1,5 @@
 package it.polito.wa2.warehouse
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,8 +12,7 @@ import java.util.*
 
 
 @Component
-class ExampleEventListener @Autowired constructor(
-    exampleService: ExampleService,
+class WarehouseEventListener @Autowired constructor(
     errorProducer: ErrorProducer,
     @Value("\${topics.out}")
     private val topicTarget: String,
@@ -22,13 +20,11 @@ class ExampleEventListener @Autowired constructor(
     private val errorTopicTarget: String,
     kafkaTemplate: KafkaTemplate<String, String>
 ) {
-    private val logger = LoggerFactory.getLogger(ExampleEventListener::class.java)
-    private val exampleService: ExampleService
+    private val logger = LoggerFactory.getLogger(WarehouseEventListener::class.java)
     private val errorProducer: ErrorProducer
     private val kafkaTemplate: KafkaTemplate<String, String>
 
     init {
-        this.exampleService = exampleService
         this.errorProducer = errorProducer
         this.kafkaTemplate = kafkaTemplate
     }
@@ -52,17 +48,18 @@ class ExampleEventListener @Autowired constructor(
 //            errorProducer.produce(errorTopicTarget,"123", message.payload)
 //        }
         kafkaTemplate.send(ProducerRecord(topicTarget, "123", message.payload))
+
     }
 
-    @KafkaListener(topics = ["\${topics.in-error}"])
-    fun error(message: Message<String>) {
-//        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
-//        logger.info("Received: ${message.payload}")
-
-        if(false){
-            exampleService.addExample(topicTarget,ExampleEntity("Quantity Available"))
-        }else{ // Quantità non disponibile
-            errorProducer.produce("order.topic", "123",message.payload)
-        }
-    }
+//    @KafkaListener(topics = ["\${topics.in-error}"])
+//    fun error(message: Message<String>) {
+////        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
+////        logger.info("Received: ${message.payload}")
+//
+//        if(false){
+//            exampleService.addExample(topicTarget,ExampleEntity("Quantity Available"))
+//        }else{ // Quantità non disponibile
+//            errorProducer.produce("order.topic", "123",message.payload)
+//        }
+//    }
 }

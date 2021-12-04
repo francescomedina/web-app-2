@@ -2,10 +2,9 @@ package it.polito.wa2.order.services
 
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
-import it.polito.wa2.order.ExampleEntity
-import it.polito.wa2.order.ExampleEvent
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.dto.*
+import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
@@ -21,6 +20,7 @@ import java.util.*
 @Service
 class OrderServiceImpl(
     val orderRepository: OrderRepository,
+    val eventPublisher: OutboxEventPublisher
 ) : OrderService {
 
     /**
@@ -38,11 +38,10 @@ class OrderServiceImpl(
             val orderCreated = orderRepository.save(order).onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
             }.awaitSingleOrNull()
-//            orderCreated?.let {
-//                exampleService.addExample(ExampleEntity("provaprova"))
-////                exampleEventService.publishEvent(ExampleEvent(it.id.toString(), "ORDER_CREATED"))
-//                return mono { it.toOrderDTO() }
-//            }
+            orderCreated?.let {
+                eventPublisher.publish("order.topic", orderCreated.id.toString(), orderCreated.toString(), "ORDER_CREATED")
+                return mono { it.toOrderDTO() }
+            }
         }
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")

@@ -29,77 +29,7 @@ spring.data.mongodb:
   port: 27017
   database: warehouse-db
 
-spring.cloud.function.definition: checkAvailability;decrementQuantity
-
-#spring.cloud.stream:
-#  defaultBinder: kafka
-#  default.contentType: application/json
-#  bindings:
-#    checkAvailability-in-0:
-#      destination: order-created
-#      group: checkAvailabilityGroup
-#      consumer:
-#        maxAttempts: 3
-#        backOffInitialInterval: 500
-#        backOffMaxInterval: 1000
-#        backOffMultiplier: 2.0
-#    checkAvailability-out-0:
-#      destination: warehouse-checked
-#      producer:
-#        required-groups: auditGroup
-#    decrementQuantity-in-0:
-#      destination: wallet-response
-#      group: walletResponseGroup
-#      consumer:
-#        maxAttempts: 3
-#        backOffInitialInterval: 500
-#        backOffMaxInterval: 1000
-#        backOffMultiplier: 2.0
-#    decrementQuantity-out-0:
-#      destination: warehouse-decremented
-#      producer:
-#        required-groups: auditGroup
-##    messageProcessor-in-0:
-##      destination: wallet-response,order-created
-##      group: warehouseGroup
-##      consumer:
-##        maxAttempts: 3
-##        backOffInitialInterval: 500
-##        backOffMaxInterval: 1000
-##        backOffMultiplier: 2.0
-##    messageProcessor-out-0:
-##      destination: warehouse-checked
-##      producer:
-##        required-groups: auditGroup
-##    messageProcessor-out-1:
-##      destination: warehouse-checked
-##      producer:
-##        required-groups: auditGroup
-#  kafka:
-#    binder:
-#      brokers: 127.0.0.1
-#      defaultBrokerPort: 9092
-#    bindings:
-##      messageProcessor-in-0:
-##        consumer:
-##          enableDlq: true
-#      checkAvailability-in-0:
-#        consumer:
-#          enableDlq: true
-#      decrementQuantity-in-0:
-#        consumer:
-#          enableDlq: true
-
 spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://postgres:5432/example-database
-  jpa:
-    properties:
-      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
-    open-in-view: false
   kafka:
     bootstrap-servers: kafka:9092
     consumer:
@@ -112,8 +42,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 topics:
-  in: event.order-db.order
-  out: event.warehouse.topic
+  in: order.topic
+  out: warehouse.topic
   in-error: wallet-error.topic
   out-error: warehouse-error.topic
 
@@ -139,48 +69,11 @@ spring:
       host: mongod
       port: 27017
 
-spring.cloud.stream:
-  kafka:
-    binder:
-      brokers: kafka
-
 ---
-#spring.config.activate.on-profile: streaming_partitioned
-#
-#spring.cloud.stream:
-#  bindings:
-#    checkAvailability-in-0:
-#      consumer:
-#        partitioned: true
-#        instanceCount: 2
-#    decrementQuantity-in-0:
-#      consumer:
-#        partitioned: true
-#        instanceCount: 2
-#
-#---
-#spring.config.activate.on-profile: streaming_instance_0
-#
-#spring.cloud.stream:
-#  bindings:
-#    messageProcessor-in-0:
-#      consumer:
-#        instanceIndex: 0
-#
-#---
-#spring.config.activate.on-profile: streaming_instance_1
-#
-#spring.cloud.stream:
-#  bindings:
-#    messageProcessor-in-0:
-#      consumer:
-#        instanceIndex: 1
-#
-#---
 spring.config.activate.on-profile: kafka
-spring.cloud.stream:
-  defaultBinder: kafka
-  kafka:
-    binder:
-      replication-factor: 1
+#spring.cloud.stream:
+#  defaultBinder: kafka
+#  kafka:
+#    binder:
+#      replication-factor: 1
 spring.kafka.bootstrap-servers: kafka:9092

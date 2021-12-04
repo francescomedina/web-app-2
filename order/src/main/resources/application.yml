@@ -23,51 +23,7 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.cloud.function.definition: confirmOrder
-
-#spring.cloud.stream:
-#  defaultBinder: kafka
-#  default.contentType: application/json
-#  bindings:
-#    order-out-0:
-#      destination: order-created
-#      producer:
-#        required-groups: auditGroup
-#    confirmOrder-in-0:
-#      destination: warehouse-decremented
-#      group: confirmOrderGroup
-#      consumer:
-#        maxAttempts: 3
-#        backOffInitialInterval: 500
-#        backOffMaxInterval: 1000
-#        backOffMultiplier: 2.0
-##    messageProcessor-in-0:
-##      destination: warehouse
-##      group: orderGroup
-##      consumer:
-##        maxAttempts: 3
-##        backOffInitialInterval: 500
-##        backOffMaxInterval: 1000
-##        backOffMultiplier: 2.0
-#  kafka:
-#    binder:
-#      brokers: 127.0.0.1
-#      defaultBrokerPort: 9092
-#    bindings:
-#      confirmOrder-in-0:
-#        consumer:
-#          enableDlq: true
-
 spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://postgres:5432/example-database
-  jpa:
-    properties:
-      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
-    open-in-view: false
   kafka:
     bootstrap-servers: kafka:9092
     consumer:
@@ -103,55 +59,3 @@ spring.config.activate.on-profile: docker
 server.port: 8008
 
 app.eureka-server: eureka
-
-#spring.data.mongodb.host: mongodb
-
-spring.cloud.stream:
-  kafka:
-    binder:
-      brokers: kafka
-
----
-#spring.config.activate.on-profile: streaming_partitioned
-#
-#spring.cloud.stream:
-#  bindings:
-#    wallet-out-0:
-#      producer:
-#        partition-key-expression: headers['partitionKey']
-#        partition-count: 2
-#    warehouse-out-0:
-#      producer:
-#        partition-key-expression: headers['partitionKey']
-#        partition-count: 2
-#    messageProcessor-in-0:
-#      consumer:
-#        partitioned: true
-#        instanceCount: 2
-#
-#---
-#spring.config.activate.on-profile: streaming_instance_0
-#
-#spring.cloud.stream:
-#  bindings:
-#    messageProcessor-in-0:
-#      consumer:
-#        instanceIndex: 0
-#
-#---
-#spring.config.activate.on-profile: streaming_instance_1
-#
-#spring.cloud.stream:
-#  bindings:
-#    messageProcessor-in-0:
-#      consumer:
-#        instanceIndex: 1
-#
-#---
-spring.config.activate.on-profile: kafka
-spring.cloud.stream:
-  defaultBinder: kafka
-  kafka:
-    binder:
-      replication-factor: 1
-spring.kafka.bootstrap-servers: kafka:9092
