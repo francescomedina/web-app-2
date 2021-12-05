@@ -101,6 +101,7 @@ class WalletServiceImpl(
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Only the wallet owner can create transaction")
         }
 
+
         // Check if the sender has enough money to carry out the transaction
         if (senderWallet.amount < transactionDTO.amount.abs()) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Sender has not enough money to compute the transaction")
@@ -126,7 +127,8 @@ class WalletServiceImpl(
                 amount = transactionDTO.amount,
                 time = Instant.now(),
                 senderWalletId = senderWallet.id,
-                receiverWalletId = receiverWallet.id
+                receiverWalletId = receiverWallet.id,
+                reason = transactionDTO.reason
             )
 
             return transactionRepository.save(newTransaction).awaitSingle().toTransactionDTO()

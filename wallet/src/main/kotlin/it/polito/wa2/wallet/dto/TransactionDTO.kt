@@ -5,6 +5,7 @@ import org.bson.types.ObjectId
 import java.math.BigDecimal
 import java.time.Instant
 import javax.validation.constraints.DecimalMin
+import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 
 data class TransactionDTO(
@@ -19,10 +20,13 @@ data class TransactionDTO(
 
     @field:NotNull(message = "Missing required body parameter: receiverWalletId")
     val receiverWalletId: ObjectId?,
+
+    @field:NotBlank(message = "Reason field is required")
+    val reason : String = ""
 ) {
 
 }
 
 fun TransactionEntity.toTransactionDTO() : TransactionDTO{
-   return TransactionDTO(id = id, amount = amount, time=time, senderWalletId=senderWalletId, receiverWalletId=receiverWalletId)
+   return TransactionDTO(id = id, amount = amount, time=time, senderWalletId=senderWalletId, receiverWalletId=receiverWalletId, reason=reason)
 }
