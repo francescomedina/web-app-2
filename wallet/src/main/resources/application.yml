@@ -58,6 +58,6 @@ management.endpoints.web.exposure.include: "*"
 ---
 spring.config.activate.on-profile: docker
 
-server.port: 8008
+server.port: 8080
 
 app.eureka-server: eureka

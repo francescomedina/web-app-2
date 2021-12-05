@@ -54,7 +54,7 @@ services:
     build: ./catalog
     mem_limit: 512m
     ports:
-      - "8008:8008"
+      - "8080:8080"
       - "5005:5005"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -90,15 +90,15 @@ services:
     volumes:
       - ./mongod-1:/data/db
 
-  kowl:
-    image: quay.io/cloudhut/kowl:master-d782eab
-    container_name: kowl
-    depends_on:
-      - kafka
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_BROKERS: kafka:9092
+#  kowl:
+#    image: quay.io/cloudhut/kowl:master-d782eab
+#    container_name: kowl
+#    depends_on:
+#      - kafka
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      KAFKA_BROKERS: kafka:9092
 
   kafka:
     image: debezium/kafka:1.8
