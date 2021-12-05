@@ -4,6 +4,7 @@ import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
+import java.time.Instant
 
 
 @Document(collection = "outbox-event")
@@ -22,5 +23,9 @@ data class OutboxEvent (
     var payload: String,
 
     @Field(name = "headers")
-    var headers: String? = null
+    var headers: String? = null,
+
+    val timestamp: Instant = Instant.now(),
+
+    val type: String
 )

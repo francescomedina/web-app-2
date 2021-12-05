@@ -22,7 +22,7 @@ class OutboxEventPublisher @Autowired constructor(
 	suspend fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
 		try {
 //			val payload = objectMapper.writeValueAsString(wallet)
-			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload)
+			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = "ORDER_CREATED")
 			val headers: MutableMap<String, String> = HashMap()
 			headers["aggregate_id"] = aggregateId
 			headers["message_id"] = outboxEvent.messageId.toString()

@@ -128,22 +128,6 @@ services:
       timeout: 3s
       retries: 10
 
-#  connect:
-#    container_name: connect
-#    ports:
-#      - '8083:8083'
-#    environment:
-#      - GROUP_ID=1
-#      - CONFIG_STORAGE_TOPIC=docker-connect-configs
-#      - OFFSET_STORAGE_TOPIC=docker-connect-offset
-#      - STATUS_STORAGE_TOPIC=docker-connect-status
-#      - 'BOOTSTRAP_SERVERS=kafka:9092'
-#    links:
-#      - zookeeper:zookeeper
-#      - kafka:kafka
-#      - mongod:mongod
-#    image: debezium/connect:latest
-
   jaeger:
     image: jaegertracing/all-in-one:1
     ports:
