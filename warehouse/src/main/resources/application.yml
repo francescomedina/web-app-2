@@ -65,9 +65,7 @@ app.eureka-server: eureka
 spring:
   data:
     mongodb:
-      database: warehouse-db
-      host: mongod
-      port: 27017
+      uri: ${MONGODB_URI}
 
 ---
 spring.config.activate.on-profile: kafka

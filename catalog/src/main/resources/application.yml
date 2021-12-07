@@ -15,9 +15,7 @@ spring:
         debug: true
   data:
     mongodb:
-      database: user-db
-      host: mongod
-      port: 27017
+      uri: ${MONGODB_URI}
 
 
 # JWT configuration

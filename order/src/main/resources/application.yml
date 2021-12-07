@@ -36,9 +36,7 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
   data:
     mongodb:
-      database: order-db
-      host: mongod
-      port: 27017
+      uri: ${MONGODB_URI}
 
 topics:
   in: wallet.topic

@@ -8,6 +8,7 @@ services:
     ports:
       - "5004:5004"
     environment:
+      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/order-db?authSource=admin
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5004
     depends_on:
@@ -15,8 +16,8 @@ services:
         condition: service_started
       eureka:
         condition: service_healthy
-      mongod:
-        condition: service_healthy
+      mongodb-primary:
+        condition: service_started
 
   wallet:
     build: ./wallet
@@ -24,6 +25,7 @@ services:
     ports:
       - "5003:5003"
     environment:
+      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/wallet-db?authSource=admin
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5003
     depends_on:
@@ -31,8 +33,8 @@ services:
         condition: service_started
       eureka:
         condition: service_healthy
-      mongod:
-        condition: service_healthy
+      mongodb-primary:
+        condition: service_started
 
   warehouse:
     build: ./warehouse
@@ -40,6 +42,7 @@ services:
     ports:
       - "5002:5002"
     environment:
+      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/warehouse-db?authSource=admin
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002
     depends_on:
@@ -47,8 +50,8 @@ services:
         condition: service_started
       eureka:
         condition: service_healthy
-      mongod:
-        condition: service_healthy
+      mongodb-primary:
+        condition: service_started
 
   catalog:
     build: ./catalog
@@ -57,38 +60,50 @@ services:
       - "8080:8080"
       - "5005:5005"
     environment:
+      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/user-db?authSource=admin
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     depends_on:
       kafka:
         condition: service_started
-      mongod:
-        condition: service_healthy
+      mongodb-primary:
+        condition: service_started
 
-  mongod:
+  mongodb-primary:
+    container_name: mongodb-primary
+    image: 'bitnami/mongodb:4.4.8'
     ports:
-      - '27017:27017'
-    container_name: mongod
-    image: debezium/example-mongodb:1.8
-    healthcheck:
-      test: "mongo --eval 'db.stats().ok'"
-      interval: 5s
-      timeout: 2s
-      retries: 60
-    command: [ "--replSet", "library-mongodb-replicaset"]
-    volumes:
-      - ./mongod:/data/db
+      - "27017:27017"
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: mongodb-primary
+      MONGODB_REPLICA_SET_MODE: primary
+      MONGODB_ROOT_PASSWORD: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGODB_REPLICA_SET_KEY: replicasetkey123
 
-  mongod-1:
-    ports:
-      - '27018:27017'
-    container_name: mongo-rp-1
-    command: [ "--replSet", "library-mongodb-replicaset"]
-    image: debezium/example-mongodb:1.8
+  mongodb-secondary:
+    container_name: mongodb-secondary
+    image: 'bitnami/mongodb:4.4.8'
     depends_on:
-      - mongod
-    volumes:
-      - ./mongod-1:/data/db
+      - mongodb-primary
+    environment:
+      MONGODB_REPLICA_SET_MODE: secondary
+      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
+      MONGODB_REPLICA_SET_KEY: replicasetkey123
+
+  mongodb-arbiter:
+    container_name: mongodb-arbiter
+    image: 'bitnami/mongodb:4.4.8'
+    depends_on:
+      - mongodb-primary
+    environment:
+      MONGODB_REPLICA_SET_MODE: arbiter
+      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
+      MONGODB_REPLICA_SET_KEY: replicasetkey123
 
 #  kowl:
 #    image: quay.io/cloudhut/kowl:master-d782eab
@@ -101,21 +116,37 @@ services:
 #      KAFKA_BROKERS: kafka:9092
 
   kafka:
-    image: debezium/kafka:1.8
+    container_name: kafka
+    image: confluentinc/cp-kafka:6.2.0
     ports:
-      - "9092:9092"
-    links:
+      - "29092:29092"
+    depends_on:
       - zookeeper
     environment:
-      - ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CREATE_TOPICS="docker-connect-offset:1:1,docker-connect-configs:1:1,docker-connect-status:1:1"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  kafdrop:
+    container_name: kafdrop
+    image: obsidiandynamics/kafdrop:3.27.0
+    ports:
+      - "9000:9000"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
 
   zookeeper:
-    image: debezium/zookeeper:1.8
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:6.2.0
     ports:
       - "2181:2181"
-      - "2888:2888"
-      - "3888:3888"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
 
   eureka:
     build: ./eureka
@@ -134,43 +165,18 @@ services:
       - "6831:6831/udp"
       - "16686:16686"
 
-  connect:
-    image: debezium/strimzi-connect
-    build: ./debezium-strimzi
+  debezium-connect:
+    container_name: debezium-connect
+    build:
+      context: ./custom-debezium-transformer
     ports:
       - "8083:8083"
-    links:
-      - kafka:kafka
-      - mongod:mongod
-      - zookeeper:zookeeper
-    environment:
-      - KAFKA_LOG4J_OPTS=-Dlog4j.configuration=file:/opt/kafka/config/connect-log4j.properties
-      - KAFKA_CONNECT_BOOTSTRAP_SERVERS=kafka:9092
-      - |
-        KAFKA_CONNECT_CONFIGURATION=
-        key.converter=org.apache.kafka.connect.json.JsonConverter
-        value.converter=org.apache.kafka.connect.json.JsonConverter
-        key.converter.schemas.enable=false
-        value.converter.schemas.enable=false
-        group.id=connect
-        offset.storage.topic=connect-offsets
-        offset.storage.replication.factor=1
-        config.storage.topic=connect-configs
-        config.storage.replication.factor=1
-        status.storage.topic=connect-status
-        status.storage.replication.factor=1
-        consumer.interceptor.classes=io.opentracing.contrib.kafka.TracingConsumerInterceptor
-        producer.interceptor.classes=io.opentracing.contrib.kafka.TracingProducerInterceptor
-      - JAEGER_SERVICE_NAME=kafka-connect
-      - JAEGER_AGENT_HOST=jaeger
-      - JAEGER_SAMPLER_TYPE=const
-      - JAEGER_SAMPLER_PARAM=1
-      - STRIMZI_TRACING=jaeger
-      - BOOTSTRAP_SERVERS=kafka:9092
-      - GROUP_ID=1
-      - CONFIG_STORAGE_TOPIC=docker-connect-configs
-      - OFFSET_STORAGE_TOPIC=docker-connect-offset
-      - STATUS_STORAGE_TOPIC=docker-connect-status
-    command: /opt/kafka/kafka_connect_run.sh
     depends_on:
       - kafka
+      - postgres
+    environment:
+      CONFIG_STORAGE_TOPIC: debezium_connect_configs
+      OFFSET_STORAGE_TOPIC: debezium_connect_offsets
+      STATUS_STORAGE_TOPIC: debezium_connect_statuses
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
