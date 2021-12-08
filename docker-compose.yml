@@ -4,6 +4,7 @@ services:
 
   order:
     build: ./order
+    container_name: order
     mem_limit: 512m
     ports:
       - "5004:5004"
@@ -21,6 +22,7 @@ services:
 
   wallet:
     build: ./wallet
+    container_name: wallet
     mem_limit: 512m
     ports:
       - "5003:5003"
@@ -38,6 +40,7 @@ services:
 
   warehouse:
     build: ./warehouse
+    container_name: warehouse
     mem_limit: 512m
     ports:
       - "5002:5002"
@@ -55,6 +58,7 @@ services:
 
   catalog:
     build: ./catalog
+    container_name: catalog
     mem_limit: 512m
     ports:
       - "8080:8080"
@@ -80,6 +84,11 @@ services:
       MONGODB_ROOT_PASSWORD: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
       MONGODB_REPLICA_SET_KEY: replicasetkey123
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:'replicasetkey123',members:[{_id:0,host:\"mongodb-primary:27017\"},{_id:1,host:\"mongodb-secondary:27017\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
+      interval: 10s
+    volumes:
+      - ./mongodb-primary:/data/db
 
   mongodb-secondary:
     container_name: mongodb-secondary
@@ -92,6 +101,8 @@ services:
       MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
       MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
       MONGODB_REPLICA_SET_KEY: replicasetkey123
+    volumes:
+      - ./mongodb-secondary:/data/db
 
   mongodb-arbiter:
     container_name: mongodb-arbiter
@@ -105,15 +116,17 @@ services:
       MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
       MONGODB_REPLICA_SET_KEY: replicasetkey123
 
-#  kowl:
-#    image: quay.io/cloudhut/kowl:master-d782eab
-#    container_name: kowl
-#    depends_on:
-#      - kafka
-#    ports:
-#      - "8080:8080"
-#    environment:
-#      KAFKA_BROKERS: kafka:9092
+  kowl:
+    image: quay.io/cloudhut/kowl:master-d782eab
+    container_name: kowl
+    depends_on:
+      - kafka
+      - kafdrop
+      - zookeeper
+    ports:
+      - "8008:8080"
+    environment:
+      KAFKA_BROKERS: kafka:9092
 
   kafka:
     container_name: kafka
@@ -173,7 +186,6 @@ services:
       - "8083:8083"
     depends_on:
       - kafka
-      - postgres
     environment:
       CONFIG_STORAGE_TOPIC: debezium_connect_configs
       OFFSET_STORAGE_TOPIC: debezium_connect_offsets

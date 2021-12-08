@@ -13,5 +13,5 @@ build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-./mongod
-./mongod-1
+mongodb-primary
+mongodb-secondary

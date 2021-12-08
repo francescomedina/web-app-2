@@ -49,6 +49,18 @@ class CatalogApplication {
     fun routes(builder: RouteLocatorBuilder): RouteLocator {
         return builder
             .routes()
+            .route("wallet-route") { it ->
+                it.path(true, "/wallet-composite/**")
+                    .filters { f->
+                        f.circuitBreaker {
+                                it -> it.setFallbackUri("forward:/wallet-failure")
+                        }
+                        f.rewritePath("/wallet-composite", "/wallets")
+
+                    }
+
+                    .uri("lb://wallet")
+            }
             .route("order-route") { it ->
                 it.path(true, "/order-composite/**")
                     .filters { f->
@@ -61,18 +73,6 @@ class CatalogApplication {
                     }
 
                     .uri("lb://order")
-            }
-            .route("wallet-route") { it ->
-                it.path(true, "/wallet-composite/**")
-                    .filters { f->
-                        f.circuitBreaker {
-                                it -> it.setFallbackUri("forward:/wallet-failure")
-                        }
-                        f.rewritePath("/wallet-composite", "/wallets")
-
-                    }
-
-                    .uri("lb://wallet")
             }
             .route("warehouse-route") { it ->
                 it.path(true, "/warehouse-composite/**")

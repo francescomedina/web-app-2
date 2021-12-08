@@ -24,10 +24,10 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.data.mongodb:
-  host: localhost
-  port: 27017
-  database: warehouse-db
+#spring.data.mongodb:
+#  host: localhost
+#  port: 27017
+#  database: warehouse-db
 
 spring:
   kafka:
@@ -40,6 +40,9 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
 
 topics:
   in: order.topic

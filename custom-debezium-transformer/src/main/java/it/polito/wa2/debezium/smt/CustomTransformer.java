@@ -1,4 +1,4 @@
-package it.vincenzocorso.debezium.smt;
+package it.polito.wa2.debezium.smt;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
