@@ -7,11 +7,7 @@ import org.slf4j.LoggerFactory
 
 inline fun <reified T> ObjectMapper.readValue(s: String): T = this.readValue(s, object : TypeReference<T>() {})
 
-/**
- * Custom smt transformer for the Debezium MongoDB connector.
- *
- * @author Vincenzo Corso
- */
+
 class CustomMongoTransformer<R : ConnectRecord<R>> :
     org.apache.kafka.connect.transforms.Transformation<R> {
     override fun apply(sourceRecord: R): R {
@@ -66,3 +62,45 @@ class CustomMongoTransformer<R : ConnectRecord<R>> :
             com.fasterxml.jackson.databind.ObjectMapper()
     }
 }
+//package it.polito.wa2.wa2debeziumtransformer
+//
+//import org.apache.kafka.common.config.ConfigDef
+//import org.apache.kafka.connect.connector.ConnectRecord
+//import org.apache.kafka.connect.data.Schema
+//import org.apache.kafka.connect.data.Struct
+//import org.apache.kafka.connect.transforms.Transformation
+//
+///**
+// * Created on 16/August/2021 By Author Eresh, Gorantla
+// */
+//class OutboxTransformer<R : ConnectRecord<R>?> :
+//    Transformation<R> {
+//    override fun apply(record: R): R {
+//        var record = record
+//        val kStruct = record!!.value() as Struct
+//        val databaseOperation = kStruct.getString("op")
+//        if ("c".equals(databaseOperation, ignoreCase = true)) {
+//            val after = kStruct["after"] as Struct
+//            val UUID = after.getString("id")
+//            val payload = after.getString("payload")
+//            val eventName = after.getString("event_name").toLowerCase()
+//            val topic = eventName.toLowerCase()
+//            val headers = record.headers()
+//            headers.addString("eventId", UUID)
+//
+//            // Prepare the event to be published.
+//            record = record.newRecord(
+//                topic, null, Schema.STRING_SCHEMA, UUID,
+//                null, payload, record.timestamp(), headers
+//            )
+//        }
+//        return record
+//    }
+//
+//    override fun config(): ConfigDef {
+//        return ConfigDef()
+//    }
+//
+//    override fun close() {}
+//    override fun configure(configs: Map<String?, *>?) {}
+//}

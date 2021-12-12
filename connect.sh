@@ -1,1 +1,1 @@
-curl -i -X POST -H "Accept: application/json" -H "Content-Type: application/json" http://localhost:8083/connectors -d @connect-mongo.json
+curl -i -X POST -H "Accept: application/json" -H "Content-Type: application/json" http://0.0.0.0:8083/connectors -d @connect-mongo.json
