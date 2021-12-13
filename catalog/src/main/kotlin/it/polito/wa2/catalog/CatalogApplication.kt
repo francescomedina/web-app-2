@@ -74,7 +74,28 @@ class CatalogApplication {
 
                     .uri("lb://wallet")
             }
+            .route("warehouse-route") { it ->
+                it.path(true, "/warehouse-composite/**")
+                    .filters { f->
+                        f.circuitBreaker {
+                                it -> it.setFallbackUri("forward:/warehouse-failure")
+                        }
+                        f.rewritePath("/warehouse-composite", "/warehouse")
 
+                    }
+                    .uri("lb://warehouse")
+            }
+            .route("products-route") { it ->
+                it.path(true, "/products-composite/**")
+                    .filters { f->
+                        f.circuitBreaker {
+                                it -> it.setFallbackUri("forward:/warehouse-failure")
+                        }
+                        f.rewritePath("/products-composite", "/products")
+
+                    }
+                    .uri("lb://warehouse")
+            }
             .build()
     }
 
@@ -83,11 +104,15 @@ class CatalogApplication {
         return "Order service is unavailable"
     }
 
-  /*  @GetMapping("/wallet-failure")
+    @GetMapping("/wallet-failure")
     fun walletFailure(): String {
         return "Wallet service is unavailable"
     }
-*/
+
+    @GetMapping("/warehouse-failure")
+    fun warehouseFailure(): String {
+        return "Warehouse service is unavailable"
+    }
 
     /** START JAVA MAIL SENDER **/
 
@@ -128,8 +153,6 @@ class CatalogApplication {
 
     /** END JAVA MAIL SENDER **/
 
-
-
     @Value("\${api.common.version}")
     var apiVersion: String? = null
 
@@ -162,42 +185,7 @@ class CatalogApplication {
 
     @Value("\${api.common.contact.email}")
     var apiContactEmail: String? = null
-    private val LOG: Logger = LoggerFactory.getLogger(CatalogApplication::class.java)
 
-//    private val threadPoolSize: Int
-//    private val taskQueueSize: Int
-//
-//    @Bean
-//    fun publishEventScheduler(): Scheduler {
-//        LOG.info("Creates a messagingScheduler with connectionPoolSize = {}", threadPoolSize)
-//        return Schedulers.newBoundedElastic(threadPoolSize, taskQueueSize, "publish-pool")
-//    }
-
-    //@Autowired
-    //var integration: CatalogIntegration? = null
-//    @Bean
-//    fun coreServices(): ReactiveHealthContributor {
-//        val registry: MutableMap<String, ReactiveHealthIndicator> = LinkedHashMap()
-//        registry["product"] = ReactiveHealthIndicator { integration.getProductHealth() }
-//        registry["recommendation"] = ReactiveHealthIndicator { integration.getRecommendationHealth() }
-//        registry["review"] = ReactiveHealthIndicator { integration.getReviewHealth() }
-//        return CompositeReactiveHealthContributor.fromMap(registry)
-//    }
-
-//    @Bean
-//    @LoadBalanced
-//    fun loadBalancedWebClientBuilder(): WebClient.Builder {
-//        return WebClient.builder()
-//    }
-
-    companion object {
-        private val LOG = LoggerFactory.getLogger(CatalogApplication::class.java)
-    }
-
-//    init {
-//        this.threadPoolSize = threadPoolSize
-//        this.taskQueueSize = taskQueueSize
-//    }
 }
 
 fun main(args: Array<String>) {
