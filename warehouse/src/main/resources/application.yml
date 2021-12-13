@@ -1,10 +1,17 @@
-
 server.port: 7001
 server.error.include-message: always
 
 spring.application.name: warehouse
 
 app.eureka-server: localhost
+
+# JWT configuration
+application:
+  jwt:
+    jwtSecret: tNO+KhVrTj3B4q0+SEwz/NSvZq7y577jOjvY4uPgAR4=
+    jwtExpirationMs: 1000000
+    jwtHeader: Authorization
+    jwtHeaderStart: Bearer
 
 eureka:
   client:
@@ -13,6 +20,7 @@ eureka:
     initialInstanceInfoReplicationIntervalSeconds: 5
     registryFetchIntervalSeconds: 5
   instance:
+    hostname: localhost
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
