@@ -116,17 +116,17 @@ services:
       MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
       MONGODB_REPLICA_SET_KEY: replicasetkey123
 
-#  kowl:
-#    image: quay.io/cloudhut/kowl:master-d782eab
-#    container_name: kowl
-#    depends_on:
-#      - kafka
-#      - kafdrop
-#      - zookeeper
-#    ports:
-#      - "8008:8080"
-#    environment:
-#      KAFKA_BROKERS: kafka:9092
+  kowl:
+    image: quay.io/cloudhut/kowl:master-d782eab
+    container_name: kowl
+    depends_on:
+      - kafka
+      - kafdrop
+      - zookeeper
+    ports:
+      - "8008:8080"
+    environment:
+      KAFKA_BROKERS: kafka:9092
 
   kafka:
     container_name: kafka
@@ -172,17 +172,9 @@ services:
       timeout: 3s
       retries: 10
 
-#  jaeger:
-#    image: jaegertracing/all-in-one:1
-#    ports:
-#      - "6831:6831/udp"
-#      - "16686:16686"
-
   debezium-connect:
     container_name: debezium-connect
-    image: wa2-debezium-transformer
-    build: ./wa2-debezium-transformer
-    hostname: debezium-connect
+    build: ./mongo-connector
     ports:
       - "8083:8083"
     depends_on:

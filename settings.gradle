@@ -7,3 +7,5 @@ include ':wallet'
 include ':warehouse'
 include 'custom-debezium-transformer'
 include 'wa2-debezium-transformer'
+include 'mongo-connector'
+

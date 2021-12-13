@@ -1,4 +1,4 @@
-package it.polito.wa2.wa2debeziumtransformer
+package it.polito.wa2.smt
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -27,7 +27,7 @@ class CustomMongoTransformer<R : ConnectRecord<R>> :
 //                    val headersMap: Map<String?, String?> = objectMapper.readValue<HashMap<String, String>>(message.payload, typeRef)
                     val headersMap: Map<String,String> = objectMapper.readValue(encodedHeaders)
                     for ((key, value) in headersMap) headers.addString(
-                    key, value
+                        key, value
                     )
                 } catch (ex: Exception) {
                     log.error("Can't decode headers column: ", ex)

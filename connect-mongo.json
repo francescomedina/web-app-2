@@ -13,6 +13,6 @@
     "collection.include.list": "order-db.outbox-event,warehouse-db.outbox-event,wallet-db.outbox-event",
     "tombstones.on.delete": "false",
     "transforms": "outbox",
-    "transforms.outbox.type": "it.polito.wa2.wa2debeziumtransformer.CustomMongoTransformer"
+    "transforms.outbox.type": "it.polito.wa2.smt.CustomMongoTransformer"
   }
 }

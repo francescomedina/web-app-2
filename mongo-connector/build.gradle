@@ -1,0 +1,24 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm" version "1.6.10-RC"
+}
+
+version 'unspecified'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.apache.kafka:connect-api:2.8.0"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.12.5"
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': 'it.polito.wa2.smt.CustomMongoTransformerKt'
+    }
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+}
