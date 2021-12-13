@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono
 
 interface WarehouseRepository : ReactiveMongoRepository<WarehouseEntity, String> {
 
-    fun findByOrderId(orderId: Int): Mono<WarehouseEntity?>
+    //fun findByOrderId(orderId: Int): Mono<WarehouseEntity?>
 }

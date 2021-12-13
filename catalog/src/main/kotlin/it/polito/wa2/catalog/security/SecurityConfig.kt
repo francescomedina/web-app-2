@@ -57,6 +57,7 @@ class SecurityConfig {
             .pathMatchers("/auth/user/**").hasAuthority(Rolename.CUSTOMER.toString())
 
             .pathMatchers("/auth/**").permitAll()
+            .pathMatchers(HttpMethod.POST, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
             .pathMatchers(HttpMethod.GET, "/products-composite/**").permitAll()
 
             // The other exchange (route) are authenticated

@@ -139,6 +139,7 @@ class WalletController(
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
             // Ask the transactions to the service. Throw an exception if the user can't access to such information
+            // FIXME: This must return a Flux<TransactionDTO> not entity
             val transactionsDTO = walletServiceImpl.getTransactionsByPeriod(
                 userInfoJWT = userInfoJWT,
                 walletId = senderId,
