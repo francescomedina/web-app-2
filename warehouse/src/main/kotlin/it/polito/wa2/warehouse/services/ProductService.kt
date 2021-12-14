@@ -6,10 +6,13 @@ import it.polito.wa2.warehouse.dto.UpdateProductDTO
 import reactor.core.publisher.Flux
 
 interface ProductService {
-    fun getProductByCategory(category: Category?): Flux<ProductDTO>
+    fun getProductsByCategory(category: Category?): Flux<ProductDTO>
     fun getProductByID(productID: String): ProductDTO
     fun createProduct(productDTO: ProductDTO): ProductDTO
     fun updateProduct(productID: String, productDTO: ProductDTO): ProductDTO
     fun updatePartiallyProduct(productID: String, productDTO: UpdateProductDTO): ProductDTO
     fun deleteProductById(productID: String): ProductDTO
+    fun getPictureById(productID: String): String
+    fun updatePictureById(productID: String): String
+    fun getWarehouseIdByProductID(productID: String): List<String>
 }

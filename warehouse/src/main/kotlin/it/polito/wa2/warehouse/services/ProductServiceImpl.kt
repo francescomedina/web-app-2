@@ -15,7 +15,7 @@ class ProductServiceImpl(
     val productRepository: ProductRepository
 ) : ProductService {
 
-    override fun getProductByCategory(category: Category?): Flux<ProductDTO> {
+    override fun getProductsByCategory(category: Category?): Flux<ProductDTO> {
         return Flux.empty()
 
         TODO("Not yet implemented")
@@ -50,6 +50,18 @@ class ProductServiceImpl(
     }
 
     override fun deleteProductById(productID: String): ProductDTO {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPictureById(productID: String): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun updatePictureById(productID: String): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun getWarehouseIdByProductID(productID: String): List<String> {
         TODO("Not yet implemented")
     }
 
