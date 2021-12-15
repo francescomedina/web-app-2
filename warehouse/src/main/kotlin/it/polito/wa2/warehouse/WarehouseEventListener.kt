@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.messaging.Message
+import org.springframework.messaging.handler.annotation.Header
+import org.springframework.messaging.handler.annotation.Payload
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -38,7 +40,12 @@ class WarehouseEventListener @Autowired constructor(
 //    }
 
     @KafkaListener(topics = ["\${topics.in}"])
-    fun listen(message: Message<String>) {
+    fun listen(
+        @Payload payload: String,
+        @Header("aggregate_id") aggregateId: String,
+        @Header("message_id") messageId: String,
+        @Header("type") type: String
+    ) {
 //        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
 //        logger.info("Received: ${message.payload}")
 
@@ -47,8 +54,27 @@ class WarehouseEventListener @Autowired constructor(
 //        }else{
 //            errorProducer.produce(errorTopicTarget,"123", message.payload)
 //        }
-        kafkaTemplate.send(ProducerRecord(topicTarget, "123", message.payload))
+        val key = aggregateId + '_' + messageId + '_' + type
+        kafkaTemplate.send(ProducerRecord("warehouse.topic", key, payload))
+    }
 
+    @KafkaListener(topics = ["wallet.topic"])
+    fun decrementQuantity(
+        @Payload payload: String,
+        @Header("aggregate_id") aggregateId: String,
+        @Header("message_id") messageId: String,
+        @Header("type") type: String
+    ) {
+//        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
+//        logger.info("Received: ${message.payload}")
+
+//        if(false){
+//            exampleService.addExample(topicTarget,ExampleEntity("Quantity Available"))
+//        }else{
+//            errorProducer.produce(errorTopicTarget,"123", message.payload)
+//        }
+        val key = aggregateId + '_' + messageId + '_' + type
+        kafkaTemplate.send(ProducerRecord("warehouse.topic", key, payload))
     }
 
 //    @KafkaListener(topics = ["\${topics.in-error}"])

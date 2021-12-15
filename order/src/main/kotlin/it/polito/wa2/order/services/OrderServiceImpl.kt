@@ -39,7 +39,12 @@ class OrderServiceImpl(
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
             }.awaitSingleOrNull()
             orderCreated?.let {
-                eventPublisher.publish("order.topic", orderCreated.id.toString(), orderCreated.toString(), "ORDER_CREATED")
+                eventPublisher.publish(
+                    "order.topic",
+                    orderCreated.id.toString(),
+                    orderCreated.toString(),
+                    "ORDER_CREATED"
+                )
                 return mono { it.toOrderDTO() }
             }
         }

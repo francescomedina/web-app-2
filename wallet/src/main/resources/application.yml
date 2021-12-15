@@ -20,7 +20,6 @@ eureka:
     initialInstanceInfoReplicationIntervalSeconds: 5
     registryFetchIntervalSeconds: 5
   instance:
-    hostname: localhost
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 

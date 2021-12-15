@@ -9,9 +9,11 @@ import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.WalletDTO
 import it.polito.wa2.wallet.dto.toTransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
+import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.TransactionRepository
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -25,6 +27,7 @@ import java.time.Instant
 class WalletServiceImpl(
     val walletRepository: WalletRepository,
     val transactionRepository: TransactionRepository,
+    val eventPublisher: OutboxEventPublisher
 ) : WalletService {
 
     /**
@@ -131,7 +134,19 @@ class WalletServiceImpl(
                 reason = transactionDTO.reason
             )
 
-            return transactionRepository.save(newTransaction).awaitSingle().toTransactionDTO()
+//            return transactionRepository.save(newTransaction).awaitSingle().toTransactionDTO()
+            val transactionCreated = transactionRepository.save(newTransaction).onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "TRANSACTION NOT PERSISTED")
+            }.awaitSingleOrNull()
+            transactionCreated?.let {
+                eventPublisher.publish(
+                    "wallet.topic",
+                    transactionCreated.id.toString(),
+                    transactionCreated.toString(),
+                    "TRANSACTION SUCCESS"
+                )
+                return it.toTransactionDTO()
+            }
         }
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "Generic Error")

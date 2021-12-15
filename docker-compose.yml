@@ -9,7 +9,7 @@ services:
     ports:
       - "5004:5004"
     environment:
-      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/order-db?authSource=admin
+      - MONGODB_URI=mongodb://mongodb-primary:27017/order-db
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5004
     depends_on:
@@ -27,7 +27,7 @@ services:
     ports:
       - "5003:5003"
     environment:
-      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/wallet-db?authSource=admin
+      - MONGODB_URI=mongodb://mongodb-primary:27017/wallet-db
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5003
     depends_on:
@@ -45,7 +45,7 @@ services:
     ports:
       - "5002:5002"
     environment:
-      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/warehouse-db?authSource=admin
+      - MONGODB_URI=mongodb://mongodb-primary:27017/warehouse-db
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002
     depends_on:
@@ -64,7 +64,7 @@ services:
       - "8080:8080"
       - "5005:5005"
     environment:
-      - MONGODB_URI=mongodb://root:admin@mongodb-primary:27017/user-db?authSource=admin
+      - MONGODB_URI=mongodb://mongodb-primary:27017/user-db
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     depends_on:
@@ -73,48 +73,78 @@ services:
       mongodb-primary:
         condition: service_started
 
+#  fix-mongodb-primary-permissions:
+#    image: 'bitnami/mongodb:4.4.8'
+#    user: root
+#    command: chown -R 1001:1001 /bitnami
+#    volumes:
+#      - "./mongodb-primary:/bitnami"
+#    depends_on:
+#      - mongodb-primary
+#
+#  fix-mongodb-secondary-permissions:
+#    image: 'bitnami/mongodb:4.4.8'
+#    user: root
+#    command: chown -R 1001:1001 /bitnami
+#    volumes:
+#      - "./mongodb-secondary:/bitnami"
+#    depends_on:
+#      - mongodb-secondary
+
   mongodb-primary:
     container_name: mongodb-primary
-    image: 'bitnami/mongodb:4.4.8'
+    hostname: mongodb-primary
+    image: 'mongo:latest'
+    command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
     ports:
       - "27017:27017"
-    environment:
-      MONGODB_ADVERTISED_HOSTNAME: mongodb-primary
-      MONGODB_REPLICA_SET_MODE: primary
-      MONGODB_ROOT_PASSWORD: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
-      MONGODB_REPLICA_SET_KEY: replicasetkey123
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: root
+#      MONGO_INITDB_ROOT_PASSWORD: admin
+#      MONGODB_ROOT_PASSWORD: admin
+#      MONGODB_REPLICA_SET_NAME: rs0
+#      MONGODB_ADVERTISED_HOSTNAME: mongodb-primary
+#      MONGODB_REPLICA_SET_MODE: primary
+#      MONGO_INITDB_ROOT_USERNAME: root
+#      MONGODB_ROOT_PASSWORD: admin
+#      MONGO_INITDB_ROOT_PASSWORD: admin
+#      MONGODB_REPLICA_SET_KEY: replicasetkey123
     healthcheck:
-      test: test $$(echo "rs.initiate({_id:'replicasetkey123',members:[{_id:0,host:\"mongodb-primary:27017\"},{_id:1,host:\"mongodb-secondary:27017\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
+      test: test $$(echo "rs.initiate({_id:'replicasetkey123',members:[{_id:0,host:\"mongodb-primary:27017\",priority:1},{_id:1,host:\"mongodb-secondary:27017\",priority:0},{_id:2,host:\"mongodb-arbiter:27017\",arbiterOnly:true,priority:0}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
       interval: 10s
     volumes:
-      - ./mongodb-primary:/data/db
+      - ./home/mongodb:/home/mongodb
+      - ./mongo-primary:/data/db
+#      - ./mongodb-1:/data/db
 
   mongodb-secondary:
     container_name: mongodb-secondary
-    image: 'bitnami/mongodb:4.4.8'
+    image: 'mongo:latest'
+    command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
     depends_on:
       - mongodb-primary
-    environment:
-      MONGODB_REPLICA_SET_MODE: secondary
-      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
-      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
-      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
-      MONGODB_REPLICA_SET_KEY: replicasetkey123
+#    environment:
+#      MONGODB_REPLICA_SET_MODE: secondary
+#      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
+#      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
+#      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
+#      MONGODB_REPLICA_SET_KEY: replicasetkey123
     volumes:
-      - ./mongodb-secondary:/data/db
+      - ./mongo-secondary:/data/db
 
   mongodb-arbiter:
     container_name: mongodb-arbiter
-    image: 'bitnami/mongodb:4.4.8'
+    image: 'mongo:latest'
+    command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
     depends_on:
       - mongodb-primary
-    environment:
-      MONGODB_REPLICA_SET_MODE: arbiter
-      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
-      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
-      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
-      MONGODB_REPLICA_SET_KEY: replicasetkey123
+#    environment:
+#      MONGODB_REPLICA_SET_NAME: rs0
+#      MONGODB_REPLICA_SET_MODE: arbiter
+#      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
+#      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
+#      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
+#      MONGODB_REPLICA_SET_KEY: replicasetkey123
 
   kowl:
     image: quay.io/cloudhut/kowl:master-d782eab
