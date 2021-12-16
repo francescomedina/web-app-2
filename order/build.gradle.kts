@@ -41,6 +41,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-sleuth:3.0.3")
 
 
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
