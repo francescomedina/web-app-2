@@ -1,106 +1,144 @@
 package it.polito.wa2.order.services
 
-import it.polito.wa2.api.core.order.Order
-import it.polito.wa2.api.core.order.OrderService
-import it.polito.wa2.api.exceptions.InvalidInputException
-import it.polito.wa2.api.exceptions.NotFoundException
-import it.polito.wa2.order.persistence.OrderEntity
-import it.polito.wa2.order.persistence.OrderRepository
-import it.polito.wa2.util.http.ServiceUtil
-import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.dao.DuplicateKeyException
-import org.springframework.web.bind.annotation.RestController
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import it.polito.wa2.api.composite.catalog.UserInfoJWT
+import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.order.domain.OrderEntity
+import it.polito.wa2.order.domain.ProductEntity
+import it.polito.wa2.order.dto.*
+import it.polito.wa2.order.outbox.OutboxEventPublisher
+import it.polito.wa2.order.repositories.OrderRepository
+import it.polito.wa2.order.utils.ObjectIdTypeAdapter
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
+import org.bson.types.ObjectId
+import org.springframework.http.HttpStatus
+import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.logging.Level
+import java.util.*
 
-//@RestController
-@EnableAutoConfiguration
-class OrderServiceImpl @Autowired constructor(
-    repository: OrderRepository,
-    mapper: OrderMapper,
-    serviceUtil: ServiceUtil
+@Service
+class OrderServiceImpl(
+    val orderRepository: OrderRepository,
+    val eventPublisher: OutboxEventPublisher,
+    val mailService: MailService
 ) : OrderService {
-    private val serviceUtil: ServiceUtil
-    private val repository: OrderRepository
-    private val mapper: OrderMapper
 
-    override fun deleteOrder(orderId: Int): Mono<Void?>? {
-        if (orderId < 1) {
-            throw InvalidInputException("Invalid orderId: $orderId")
-        }
-        LOG.debug("deleteProduct: tries to delete an entity with orderId: {}", orderId)
-        return repository.findByOrderId(orderId)
-            .log(LOG.name, Level.FINE)
-            .mapNotNull { e -> e?.let { repository.delete(it) } }
-            .flatMap { e -> e }
-    }
+    /**
+     * Create a order associated to a username
+     * @param userInfoJWT : information about the user that make the request
+     * @param username : username associated to that order
+     * @return the order created
+     */
+    override suspend fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
 
-    private fun setServiceAddress(e: Order): Order {
-        e.serviceAddress = serviceUtil.serviceAddress.toString()
-        return e
-    }
-
-    companion object {
-        private val LOG = LoggerFactory.getLogger(OrderServiceImpl::class.java)
-    }
-
-    init {
-        this.repository = repository
-        this.mapper = mapper
-        this.serviceUtil = serviceUtil
-    }
-
-//    override fun createOrder(body: Order): Mono<Order?>? {
-//        if (body != null) {
-//            if (body.orderId < 1) {
-//                throw InvalidInputException("Invalid orderId: " + body.orderId)
-//            }
-//        }
-//        val entity: OrderEntity = mapper.apiToEntity(body)
-//
-//        if (body != null) {
-//            return repository.save(entity)
-//                .log(LOG.name, Level.FINE)
-//                .onErrorMap(DuplicateKeyException::class.java) { ex -> InvalidInputException("Duplicate key, Product Id: " + body.orderId)
-//                }
-//                .mapNotNull { e -> mapper.entityToApi(e) }
-//        }
-//        return null
-//    }
-
-    override fun createOrder(body: Order?): Mono<Order?>? {
-        if (body != null) {
-            if (body.orderId < 1) {
-                throw InvalidInputException("Invalid orderId: " + body.orderId)
+        if (userInfoJWT.username == orderDTO.buyer) {
+            val order = OrderEntity(
+                buyer = userInfoJWT.username,
+                status = "ISSUING",
+                products = orderDTO.products?.map {
+                    ProductEntity(it.id,it.quantity,it.price)
+                }?.toList()
+            )
+            val orderCreated = orderRepository.save(order).onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
+            }.awaitSingleOrNull()
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            orderCreated?.let {
+                eventPublisher.publish(
+                    "order.topic",
+                    orderCreated.id.toString(),
+                    gson.toJson(orderCreated),
+                    "ORDER_CREATED"
+                )
+                return mono { it.toOrderDTO() }
             }
         }
-        val entity: OrderEntity = body?.let { mapper.apiToEntity(it) }!!
 
-        return repository.save(entity)
-            .log(LOG.name, Level.FINE)
-            .onErrorMap(DuplicateKeyException::class.java) { ex ->
-                InvalidInputException("Duplicate key, Product Id: " + body.orderId)
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
+
+    }
+
+    override suspend fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {
+        val order = orderRepository.findById(orderId.toString()).onErrorMap {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+        }.awaitSingleOrNull()
+        if (userInfoJWT.username == order?.buyer) {
+            if(order.status === "ISSUED"){
+                order.status = "CANCELING"
+                val orderCreated = orderRepository.save(order).onErrorMap {
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT DELETED")
+                }.awaitSingleOrNull()
+                orderCreated?.let {
+                    eventPublisher.publish(
+                        "order.topic",
+                        order.id.toString(),
+                        order.toString(),
+                        "ORDER_CANCELED"
+                    )
+                    return mono { null }
+                }
             }
-            .mapNotNull { e -> mapper.entityToApi(e) }
-
-    }
-
-    override fun getOrder(orderId: Int): Mono<Order?>? {
-        if (orderId < 1) {
-            throw InvalidInputException("Invalid orderId: $orderId")
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
         }
-        LOG.info("Will get product info for id={}", orderId)
-
-        return repository.findByOrderId(orderId)
-            .switchIfEmpty(Mono.error(NotFoundException("No product found for orderId: $orderId")))
-            .log(LOG.name, Level.FINE)
-            .mapNotNull { e -> e?.let { mapper.entityToApi(it) } }
-            .mapNotNull { e -> e?.let { setServiceAddress(it) } }
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't cancel orders for another person")
     }
 
-    override fun updateStatus(order: Order, status: String) {
-        TODO("Not yet implemented")
+    override suspend fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
+
+        if (trusted || userInfoJWT!!.isAdmin()) {
+            val orderEntity = orderRepository.findById(orderId).onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
+            }.awaitSingleOrNull()
+
+            orderEntity?.let {
+                orderEntity.status = orderDTO.status
+                ///TODO MEttere i prodotti anche
+                orderRepository.save(it).onErrorMap { error ->
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
+                }.awaitSingle()
+                if(orderDTO.status === "ISSUED"){
+                    mailService.sendMessage(it.buyer!!, "Order Issued", "Order was successfully issued")
+                    mailService.sendMessage("pacimedina@gmail.com", "Order Issued", "Order was successfully issued")
+                }
+                return mono { it.toOrderDTO() }
+            }
+
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+        }
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User not authenticated")
+    }
+
+    /**
+     * Retrieve the order by the OrderId
+     * @param userInfoJWT : information about the user that make the request
+     * @param orderId : id of the order
+     * @return the order information
+     */
+    override suspend fun getOrderById(userInfoJWT: UserInfoJWT, orderId: ObjectId): OrderDTO {
+
+        val order = orderRepository.findById(orderId.toString()).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Order not found")
+
+        if (order.buyer == userInfoJWT.username || userInfoJWT.isAdmin()) {
+            return order.toOrderDTO()
+        }
+
+        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see this order")
+    }
+
+    override suspend fun getOrders(userInfoJWT: UserInfoJWT): Flux<OrderDTO> {
+
+        if (userInfoJWT.isAdmin()) {
+            val orders = orderRepository.findAll()
+                ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Order not found")
+            return orders.map { it.toOrderDTO() }
+        }
+
+        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see all orders")
     }
 }

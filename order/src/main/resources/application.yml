@@ -1,9 +1,17 @@
-server.port: 7001
+server.port: 7002
 server.error.include-message: always
 
 spring.application.name: order
 
 app.eureka-server: localhost
+
+# JWT configuration
+application:
+  jwt:
+    jwtSecret: tNO+KhVrTj3B4q0+SEwz/NSvZq7y577jOjvY4uPgAR4=
+    jwtExpirationMs: 10000000000
+    jwtHeader: Authorization
+    jwtHeaderStart: Bearer
 
 eureka:
   client:
@@ -15,41 +23,35 @@ eureka:
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
 
-spring.cloud.function.definition: messageProcessor
-
-spring.cloud.stream:
-  defaultBinder: kafka
-  default.contentType: application/json
-  bindings:
-    wallet-out-0:
-      destination: wallet
-      producer:
-        required-groups: auditGroup
-    warehouse-out-0:
-      destination: warehouse
-      producer:
-        required-groups: auditGroup
-    messageProcessor-in-0:
-      destination: order
-      group: orderGroup
-      consumer:
-        maxAttempts: 3
-        backOffInitialInterval: 500
-        backOffMaxInterval: 1000
-        backOffMultiplier: 2.0
+spring:
   kafka:
-    binder:
-      brokers: 127.0.0.1
-      defaultBrokerPort: 9092
-    bindings:
-      messageProcessor-in-0:
-        consumer:
-          enableDlq: true
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: order-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: progettomalnati@gmail.com
+    password: progetto2021
+    properties:
+      mail:
+        smtp.auth: true
+        smtp.starttls.enable: true
+        debug: true
 
-spring.data.mongodb:
-  host: localhost
-  port: 27017
-  database: order-db
+topics:
+  in: wallet.topic
+  out: order.topic
+
 
 logging:
   level:
@@ -65,57 +67,3 @@ spring.config.activate.on-profile: docker
 server.port: 8080
 
 app.eureka-server: eureka
-
-spring.data.mongodb.host: mongodb
-
-spring.cloud.stream:
-  kafka:
-    binder:
-      brokers: kafka
-
----
-spring.config.activate.on-profile: streaming_partitioned
-
-spring.cloud.stream:
-  bindings:
-    wallet-out-0:
-      producer:
-        partition-key-expression: headers['partitionKey']
-        partition-count: 2
-    warehouse-out-0:
-      producer:
-        partition-key-expression: headers['partitionKey']
-        partition-count: 2
-    messageProcessor-in-0:
-      consumer:
-        partitioned: true
-        instanceCount: 2
-
----
-spring.config.activate.on-profile: streaming_instance_0
-
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 0
-
----
-spring.config.activate.on-profile: streaming_instance_1
-
-spring.cloud.stream:
-  bindings:
-    messageProcessor-in-0:
-      consumer:
-        instanceIndex: 1
-
----
-spring.config.activate.on-profile: kafka
-
-management.health.rabbit.enabled: false
-spring.cloud.stream:
-  defaultBinder: kafka
-  kafka:
-    binder:
-      replication-factor: 1
-spring.kafka.bootstrap-servers: kafka:9092

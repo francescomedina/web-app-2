@@ -1,27 +1,21 @@
 package it.polito.wa2.catalog.controller
 
-import it.polito.wa2.catalog.DTO.*
-import it.polito.wa2.catalog.persistence.UserEntity
-import it.polito.wa2.catalog.persistence.UserRepository
+
+import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.catalog.dto.RegistrationBody
+import it.polito.wa2.catalog.dto.UserDetailsDTO
 import it.polito.wa2.catalog.security.JwtUtils
 import it.polito.wa2.catalog.security.Rolename
-import it.polito.wa2.catalog.services.ErrorResponse
 import it.polito.wa2.catalog.services.UserDetailsServiceImpl
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.validation.ObjectError
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.bind.support.WebExchangeBindException
 import org.springframework.web.server.ResponseStatusException
-import reactor.core.publisher.Mono
 import java.security.Principal
-import java.util.function.Function
-import java.util.stream.Collectors
 import javax.validation.Valid
+import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 
 
@@ -30,11 +24,7 @@ import javax.validation.constraints.NotNull
 class UserController(
     private val jwtUtils: JwtUtils,
     private val encoder: PasswordEncoder,
-    private val users: UserDetailsServiceImpl,
-
     private val userDetailsServiceImpl: UserDetailsServiceImpl,
-    private val userRepository: UserRepository
-
 ) {
 
     /**
@@ -43,39 +33,37 @@ class UserController(
      * @return the user created or a bad request if some errors occurred
      */
     @PostMapping("/register")
-    suspend fun register(@RequestBody @Valid data: Mono<RegistrationBody>): ResponseEntity<UserDetailsDTO> {
+    suspend fun register(@RequestBody @Valid data: RegistrationBody): ResponseEntity<UserDetailsDTO> {
 
-        data.awaitSingleOrNull()?.let { it ->
-            if (it.password == it.confirmPassword) {
+        if (data.password == data.confirmPassword) {
 
-                // Mapping the information inside RegistrationBody with a UserDetailsDTO format
-                val userDTO = UserDetailsDTO(
-                    _username = it.username,
-                    _password = encoder.encode(it.password),
-                    _email = it.email,
-                    _roles = setOf(Rolename.CUSTOMER),
-                    isEnable = false
-                )
-
-                // Talking to the service above to create the user
-                try {
-                    val createdUser = userDetailsServiceImpl.createCustomerUser(userDTO)
-
-                    // Return a 201 with inside the user created
-                    return ResponseEntity.status(HttpStatus.CREATED).body(createdUser)
-
-                } catch (error: ErrorResponse) {
-                    throw ResponseStatusException(error.status, error.errorMessage)
-                }
-
-            }
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "The confirmation password and the password don't match"
+            // Mapping the information inside RegistrationBody with a UserDetailsDTO format
+            val userDTO = UserDetailsDTO(
+                _username = data.username,
+                _password = encoder.encode(data.password),
+                _roles = setOf(Rolename.CUSTOMER),
+                isEnable = false,
+                name = data.name,
+                surname = data.surname,
+                address = data.address
             )
+
+
+            try {
+                // Talking to the service above to create the user
+                val createdUser = userDetailsServiceImpl.createCustomerUser(userDTO)
+
+                // Return a 201 with inside the user created
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdUser)
+
+            } catch (error: ErrorResponse) {
+                throw ResponseStatusException(error.status, error.errorMessage)
+            }
+
         }
 
-        throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        throw ResponseStatusException(HttpStatus.BAD_REQUEST, "The confirmation password and the password don't match")
+
     }
 
 
@@ -83,57 +71,49 @@ class UserController(
      * Controller that handle the update password procedure
      * @param principal : user principal to get username
      * @param data : with the old password and the new password
+     * @return status ok if the password is updated correctly
      */
     @PostMapping("/updatePassword")
     suspend fun updatePassword(
         @AuthenticationPrincipal principal: Principal,
-        @RequestBody @Valid data: Mono<ChangePasswordBody>
+        @RequestBody @Valid data: ChangePasswordBody
     ): ResponseEntity<String> {
 
-        data.awaitSingleOrNull()?.let { body: ChangePasswordBody ->
-
-            if (body.password != body.confirmPassword) {
-                throw ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "The confirmation password and the password don't match"
-                )
-            }
-
-            // Now that the two new passwords are equal, we will check if the old password is correct
-            try {
-                // Take user info from DB
-                val userInfo = userDetailsServiceImpl.getUserByUsername(principal.name)
-
-                userInfo?.let { user ->
-
-                    if (encoder.matches(body.oldPassword, user.password)) {
-
-                        // The old password is the same we have inside the DB, so we can change it with the new one
-                        userDetailsServiceImpl.updatePassword(
-                            username = principal.name,
-                            password = encoder.encode(body.password)
-                        )
-
-                        // Return a 201 with inside the user created
-                        return ResponseEntity.status(HttpStatus.OK).body("Password updated correctly")
-
-                    }
-                    throw ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "The old password is not correct"
-                    )
-                }
-
-            } catch (error: ErrorResponse) {
-                // Some errors occurred, we return the errorMessage formatted inside updatePassword method
-                throw ResponseStatusException(error.status, error.errorMessage)
-            }
+        // Check if the password and confirm password match
+        if (data.password != data.confirmPassword) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Confirmation password and password don't match")
         }
 
-        throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        // Now that the two new passwords are equal, we will check if the old password is correct
+        try {
+            // Ask the service the information about the user
+            val userInfo = userDetailsServiceImpl.getUserByUsername(principal.name)
+                ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User doesn't exist")
+
+            if (encoder.matches(data.oldPassword, userInfo.password)) {
+
+                // The old password is the same we have inside the DB, so we can change it with the new one
+                userDetailsServiceImpl.updatePassword(
+                    username = principal.name,
+                    password = encoder.encode(data.password)
+                )
+
+                // Return a 201 with inside the user created
+                return ResponseEntity.status(HttpStatus.OK).body("Password updated correctly")
+            }
+
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "The old password is not correct")
+
+        } catch (error: ErrorResponse) {
+            // Some errors occurred, we return the errorMessage formatted inside updatePassword method
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
     }
 
-
+    /**
+     * Confirm the registration. User will call this endpoint clicking inside the link they found in the email
+     * @return token : unique token that represent the user
+     */
     @GetMapping("/registrationConfirm")
     suspend fun confirmRegistration(@RequestParam("token") token: String): ResponseEntity<String> {
 
@@ -152,13 +132,15 @@ class UserController(
         }
     }
 
-
-
+    /**
+     * Handle the login of the user
+     * @param login : info that allow to log in the user
+     */
     @PostMapping("/login")
     suspend fun login(@RequestBody login: Login): Jwt {
 
         // Search if there is a user with the given name
-        val user = users.getUserByUsername(login.username)
+        val user = userDetailsServiceImpl.getUserByUsername(login.username)
 
         user?.let {
             // If the user is not null, we will check if the password provided is the same of the password stored
@@ -200,6 +182,24 @@ class UserController(
 
     }
 
+    @GetMapping("/user/myInfo")
+    suspend fun myInfo(@AuthenticationPrincipal principal: Principal): UserDetailsDTO? {
+        return userDetailsServiceImpl.getUserByUsername(principal.name)
+    }
+
+    @PatchMapping("/user/updateInfo")
+    suspend fun updateInfo(@AuthenticationPrincipal principal: Principal, @RequestBody @Valid newInfo: NewInfo): ResponseEntity<UserDetailsDTO> {
+        try {
+
+            val savedInfo = userDetailsServiceImpl.updateInfo(principal.name, newInfo.name, newInfo.surname, newInfo.address)
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedInfo)
+
+        } catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
+    }
+
 
     @PostMapping("/admin/user")
     suspend fun setUserEnabled(@RequestBody @Valid data: EnableUser): ResponseEntity<String> {
@@ -212,11 +212,8 @@ class UserController(
                 ResponseEntity.status(HttpStatus.OK).body("User ${data.username} was disabled")
             }
 
-        } catch (e: Exception) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                e.message
-            )
+        } catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
         }
     }
 
@@ -226,11 +223,9 @@ class UserController(
             userDetailsServiceImpl.addRole(user.username, Rolename.ADMIN)
 
             ResponseEntity.status(HttpStatus.OK).body("User ${user.username} is now admin")
-        } catch (e: Exception) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                e.message
-            )
+
+        } catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
         }
     }
 
@@ -240,11 +235,9 @@ class UserController(
             userDetailsServiceImpl.removeRole(user.username, Rolename.ADMIN)
 
             ResponseEntity.status(HttpStatus.OK).body("User ${user.username} is not admin anymore")
-        } catch (e: Exception) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                e.message
-            )
+
+        } catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
         }
     }
 
@@ -259,17 +252,34 @@ class UserController(
 
 data class Jwt(val token: String)
 
-@ControllerAdvice
-class ValidationHandler {
+// This is the representation of what the user will send during the login phase
+data class Login(
+    @field:NotBlank(message = "Missing required field: username")
+    val username: String = "",
+    @field:NotBlank(message = "Missing required field: password")
+    val password: String = ""
+)
 
-    // This is the exception launched by @Valid annotation. It will catch and format the errors inside
-    @ExceptionHandler(WebExchangeBindException::class)
-    fun handleException(e: WebExchangeBindException): ResponseEntity<List<String?>> {
-        val errors = e.bindingResult
-            .allErrors
-            .stream()
-            .map { obj: ObjectError -> obj.defaultMessage }
-            .collect(Collectors.toList())
-        return ResponseEntity.badRequest().body(errors)
-    }
-}
+data class Profile(val username: String)
+
+data class EnableUser(
+    @field:NotBlank(message = "Missing required field: username")
+    val username: String = "",
+    @field:NotNull(message = "Missing required field: enable")
+    val enable: Boolean //TODO: pUT HERE Boolean? to enable not null
+)
+
+data class ChangePasswordBody(
+    @field:NotBlank(message = "Missing required field: oldPassword")
+    val oldPassword: String = "",
+    @field:NotBlank(message = "Missing required field: password")
+    val password: String = "",
+    @field:NotBlank(message = "Missing required field: confirmPassword")
+    val confirmPassword: String = ""
+)
+
+data class NewInfo(
+    val name: String = "",
+    val surname: String = "",
+    val address: String = "",
+)

@@ -1,44 +1,30 @@
-package it.polito.wa2.api.core.order
-
-data class Order (
-    var status: String? = "CREATED",
-    var orderId: Int = 0,
-    var price: Double? = 0.0,
-    var buyer: Int? = 0,
-    var amount: Int? = 0,
-    var serviceAddress: String? = ""
-)
-//class Order {
+//package it.polito.wa2.api.core.order
 //
-//    var status: String = "CREATED"
-//    var orderId: Int = 0
-//    var price: Double = 0.0
-//    var buyer: Int = 0
-//    var amount: Int = 0
+//import org.springframework.data.annotation.PersistenceConstructor
+//import org.springframework.data.mongodb.core.mapping.Document
+//
+////data class Order (
+////    var status: String? = "CREATED",
+////    var orderId: Int = 0,
+////    var price: Double? = 0.0,
+////    var buyer: Int? = 0,
+////    var amount: Int? = 0,
+////    var serviceAddress: String? = ""
+////)
+//@Document(collection = "order")
+//class Order(
+//    var status: String? = "CREATED",
+//    var orderId: Int = 0,
+//    var price: Double? = 0.0,
+//    var buyer: Int? = 0,
+//    var amount: Int? = 0,
 //    var serviceAddress: String? = ""
+//) {
+//    lateinit var id: String
+//        private set
 //
-//    constructor() {
-//        status = "CREATED"
-//        orderId = 0
-//        price = 0.0
-//        buyer = 0
-//        amount = 0
-//        serviceAddress = "test"
-//    }
-//
-//    constructor(
-//        status: String,
-//        orderId: Int,
-//        price: Double,
-//        buyer: Int,
-//        amount: Int,
-//        serviceAddress: String?
-//    ) {
-//        this.status = status
-//        this.orderId = orderId
-//        this.price = price
-//        this.buyer = buyer
-//        this.amount = amount
-//        this.serviceAddress = serviceAddress
+//    @PersistenceConstructor
+//    constructor(id: String, beverage: String, customerName: String) : this(beverage, customerName) {
+//        this.id = id
 //    }
 //}

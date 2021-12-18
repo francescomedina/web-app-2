@@ -1,0 +1,17 @@
+[
+  {
+    "_id": "61be08d04e6ebd990b0fa5db",
+    "_class": "it.polito.wa2.wallet.domain.WalletEntity",
+    "amount": "99999",
+    "customerUsername": "bank@gmail.com",
+    "purchases": [],
+    "recharges": []
+  },
+  {
+    "_class": "it.polito.wa2.wallet.domain.WalletEntity",
+    "amount": "123",
+    "customerUsername": "pacimedina@gmail.com",
+    "purchases": [],
+    "recharges": []
+  }
+]

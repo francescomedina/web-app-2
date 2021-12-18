@@ -7,11 +7,13 @@ import java.time.ZonedDateTime
 
 class Event<K, T> {
     enum class Type {
+        ORDER_INIT,
         ORDER_CREATED,
         ORDER_CANCELLED,
         CREDIT_RESERVED,
         CREDIT_UNAVAILABLE,
         QUANTITY_AVAILABLE,
+        QUANTITY_INCREASED,
         QUANTITY_DECREASED,
         QUANTITY_UNAVAILABLE,
         ROLLBACK_PAYMENT,

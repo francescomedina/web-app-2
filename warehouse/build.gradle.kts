@@ -5,7 +5,6 @@ plugins {
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.5.31"
     kotlin("plugin.spring") version "1.5.31"
-    kotlin("kapt") version "1.5.30"
 }
 
 group = "it.polito.wa2"
@@ -35,8 +34,11 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
     implementation("org.springframework.cloud:spring-cloud-stream")
 
-    implementation("org.mapstruct:mapstruct-jdk8:1.3.1.Final")
-    kapt("org.mapstruct:mapstruct-processor:1.3.1.Final")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")
+    implementation("org.springframework.kafka:spring-kafka:2.7.6")
+    implementation("org.springframework.cloud:spring-cloud-starter-sleuth:3.0.3")
+    implementation("com.google.code.gson:gson:2.8.5")
+
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")

@@ -1,0 +1,15 @@
+{
+  "name": "mongo-debezium-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
+    "tasks.max": "1",
+    "mongodb.hosts": "rs0/mongodb-primary:27017",
+    "mongodb.name": "event",
+    "mongodb.members.auto.discover": "false",
+    "database.include.list" : "order-db,warehouse-db,wallet-db",
+    "collection.include.list": "order-db.outbox-event,warehouse-db.outbox-event,wallet-db.outbox-event",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "it.polito.wa2.smt.CustomMongoTransformer"
+  }
+}

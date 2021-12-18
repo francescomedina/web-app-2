@@ -1,45 +1,55 @@
 package it.polito.wa2.order
 
-import it.polito.wa2.order.persistence.OrderEntity
-import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.SpringApplication
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
-import org.springframework.context.event.ContextRefreshedEvent
-import org.springframework.context.event.EventListener
-import org.springframework.data.mongodb.core.ReactiveMongoOperations
-import org.springframework.data.mongodb.core.index.IndexDefinition
-import org.springframework.data.mongodb.core.index.IndexResolver
-import org.springframework.data.mongodb.core.index.MongoPersistentEntityIndexResolver
-import org.springframework.data.mongodb.core.index.ReactiveIndexOperations
-
+import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.JavaMailSenderImpl
+import org.springframework.web.bind.annotation.RestController
 
 @SpringBootApplication
+@EnableEurekaClient
 @ComponentScan("it.polito.wa2")
+@RestController
 class OrderApplication {
-    @Autowired
-    var mongoTemplate: ReactiveMongoOperations? = null
-    @EventListener(ContextRefreshedEvent::class)
-    fun initIndicesAfterStartup() {
-        val mappingContext = mongoTemplate!!.converter.mappingContext
-        val resolver: IndexResolver = MongoPersistentEntityIndexResolver(mappingContext)
-        val indexOps: ReactiveIndexOperations = mongoTemplate!!.indexOps(OrderEntity::class.java)
-        resolver.resolveIndexFor(OrderEntity::class.java).forEach { e: IndexDefinition? ->
-            indexOps.ensureIndex(e!!).block()
-        }
-    }
 
-    companion object {
-        private val LOG = LoggerFactory.getLogger(OrderApplication::class.java)
-        @JvmStatic
-        fun main(args: Array<String>) {
-            val ctx = SpringApplication.run(OrderApplication::class.java, *args)
-            val mongodDbHost = ctx.environment.getProperty("spring.data.mongodb.host")
-            val mongodDbPort = ctx.environment.getProperty("spring.data.mongodb.port")
-            LOG.info("Connected to MongoDb: $mongodDbHost:$mongodDbPort")
-        }
+    /** START JAVA MAIL SENDER **/
+
+    @Value("\${spring.mail.host}")
+    val host: String? = null
+    @Value("\${spring.mail.port}")
+    val port: Int? = 0
+    @Value("\${spring.mail.username}")
+    val username: String? = null
+    @Value("\${spring.mail.password}")
+    val password: String? = null
+    @Value("\${spring.mail.properties.mail.smtp.auth}")
+    val auth: String? = null
+    @Value("\${spring.mail.properties.mail.smtp.starttls.enable}")
+    val enable: String? = null
+    @Value("\${spring.mail.properties.mail.debug}")
+    val debug: String? = null
+
+    @Bean
+    fun getMailSender(): JavaMailSender {
+
+        val mailSender = JavaMailSenderImpl()
+        mailSender.host = host
+        mailSender.port = port ?: 8080
+
+        mailSender.username = username
+        mailSender.password = password
+
+        val props = mailSender.javaMailProperties
+        props["mail.transport.protocol"] = "smtp"
+        props["mail.smtp.auth"] = auth
+        props["mail.smtp.starttls.enable"] = enable
+        props["mail.debug"] = debug
+
+        return mailSender
     }
 }
 
