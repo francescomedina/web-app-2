@@ -25,7 +25,7 @@ data class ProductEntity (
     val price: BigDecimal = BigDecimal(0),
 
     val averageRating: Float,
-    val rating: List<RatingEntity>,
+    val rating: List<RatingEntity> = emptyList(),
 
     val createdDate: Instant = Instant.now(),
 )

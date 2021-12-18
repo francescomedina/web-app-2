@@ -1,5 +1,12 @@
 [
   {
-
+    "_id": "61be16bd0fad93e4fff50774",
+    "name": "Warehouse Torino",
+    "region": "Piemonte"
+  },
+  {
+    "_id": "61be16fed35a3f8fa7d66186",
+    "name": "Warehouse Milano",
+    "region": "Lombardia"
   }
 ]

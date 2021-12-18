@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "61be182e1da7d84f657ba26e",
+    "name": "prodotto per la casa",
+    "category": "HOME",
+    "description": "Descrizione prodotto",
+    "pictureURL": "asd",
+    "price": 5.3,
+    "averageRating": 0.2
+  },
+  {
+    "_id": "61be1836781a1505f296da23",
+    "name": "prodotto per il bagno",
+    "category": "HOME",
+    "description": "Descrizione prodotto 2",
+    "pictureURL": "asd",
+    "price": 5.3,
+    "averageRating": 0.2
+  }
+]
