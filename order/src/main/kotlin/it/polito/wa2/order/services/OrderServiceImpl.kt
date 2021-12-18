@@ -3,6 +3,7 @@ package it.polito.wa2.order.services
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.order.domain.OrderEntity
+import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
@@ -30,11 +31,16 @@ class OrderServiceImpl(
      * @param username : username associated to that order
      * @return the order created
      */
-    override suspend fun createOrder(userInfoJWT: UserInfoJWT, buyerId: String): Mono<OrderDTO> {
+    override suspend fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
 
-        if (userInfoJWT.username == buyerId) {
-            val order = OrderEntity(buyer = userInfoJWT.username)
-            order.status = "ISSUING"
+        if (userInfoJWT.username == orderDTO.buyer) {
+            val order = OrderEntity(
+                buyer = userInfoJWT.username,
+                status = "ISSUING",
+                products = orderDTO.products?.map {
+                    ProductEntity(it.id,it.amount,it.price)
+                }?.toList()
+            )
             val orderCreated = orderRepository.save(order).onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
             }.awaitSingleOrNull()

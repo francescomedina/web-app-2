@@ -1,9 +1,8 @@
 package it.polito.wa2.order.dto
 
 import it.polito.wa2.order.domain.OrderEntity
+import it.polito.wa2.order.domain.ProductEntity
 import org.bson.types.ObjectId
-import java.math.BigDecimal
-import javax.validation.constraints.DecimalMin
 import javax.validation.constraints.NotBlank
 
 data class OrderDTO(
@@ -12,12 +11,15 @@ data class OrderDTO(
     var status: String? = null,
     @field:NotBlank(message = "Buyer is required")
     var buyer: String? = null,
+    @field:NotBlank(message = "List of products is required")
+    var products: List<ProductDTO>? = emptyList(),
 )
 
 fun OrderEntity.toOrderDTO(): OrderDTO {
     return OrderDTO(
         id = id,
         status = status,
-        buyer = buyer
+        buyer = buyer,
+        products = products?.map { it.toOrderDTO() }?.toList()
     )
 }

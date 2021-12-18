@@ -95,7 +95,7 @@ class OrderController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            val createdOrder = orderDTO.buyer?.let { orderServiceImpl.createOrder(userInfoJWT, it) }
+            val createdOrder = orderDTO.let { orderServiceImpl.createOrder(userInfoJWT, it) }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder)
 

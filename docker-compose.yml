@@ -73,49 +73,21 @@ services:
       mongodb-primary:
         condition: service_started
 
-#  fix-mongodb-primary-permissions:
-#    image: 'bitnami/mongodb:4.4.8'
-#    user: root
-#    command: chown -R 1001:1001 /bitnami
-#    volumes:
-#      - "./mongodb-primary:/bitnami"
-#    depends_on:
-#      - mongodb-primary
-#
-#  fix-mongodb-secondary-permissions:
-#    image: 'bitnami/mongodb:4.4.8'
-#    user: root
-#    command: chown -R 1001:1001 /bitnami
-#    volumes:
-#      - "./mongodb-secondary:/bitnami"
-#    depends_on:
-#      - mongodb-secondary
+  mongosetup:
+    image: "mongo-setup"
+    build: "./mongo"
+    container_name: "mongosetup"
+    depends_on:
+      - mongodb-primary
 
   mongodb-primary:
     container_name: mongodb-primary
-    hostname: mongodb-primary
-    image: 'mongo:latest'
-    command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
+    image: mongo:latest
+    command: "--replSet replicasetkey123 --bind_ip_all --port 27017"
     ports:
       - "27017:27017"
-#    environment:
-#      MONGO_INITDB_ROOT_USERNAME: root
-#      MONGO_INITDB_ROOT_PASSWORD: admin
-#      MONGODB_ROOT_PASSWORD: admin
-#      MONGODB_REPLICA_SET_NAME: rs0
-#      MONGODB_ADVERTISED_HOSTNAME: mongodb-primary
-#      MONGODB_REPLICA_SET_MODE: primary
-#      MONGO_INITDB_ROOT_USERNAME: root
-#      MONGODB_ROOT_PASSWORD: admin
-#      MONGO_INITDB_ROOT_PASSWORD: admin
-#      MONGODB_REPLICA_SET_KEY: replicasetkey123
-    healthcheck:
-      test: test $$(echo "rs.initiate({_id:'replicasetkey123',members:[{_id:0,host:\"mongodb-primary:27017\",priority:1},{_id:1,host:\"mongodb-secondary:27017\",priority:0},{_id:2,host:\"mongodb-arbiter:27017\",arbiterOnly:true,priority:0}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
-      interval: 10s
     volumes:
-      - ./home/mongodb:/home/mongodb
       - ./mongo-primary:/data/db
-#      - ./mongodb-1:/data/db
 
   mongodb-secondary:
     container_name: mongodb-secondary
@@ -123,12 +95,6 @@ services:
     command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
     depends_on:
       - mongodb-primary
-#    environment:
-#      MONGODB_REPLICA_SET_MODE: secondary
-#      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
-#      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
-#      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
-#      MONGODB_REPLICA_SET_KEY: replicasetkey123
     volumes:
       - ./mongo-secondary:/data/db
 
@@ -138,13 +104,6 @@ services:
     command: ["--replSet", "replicasetkey123", "--bind_ip_all", "--port", "27017"]
     depends_on:
       - mongodb-primary
-#    environment:
-#      MONGODB_REPLICA_SET_NAME: rs0
-#      MONGODB_REPLICA_SET_MODE: arbiter
-#      MONGODB_INITIAL_PRIMARY_HOST: mongodb-primary
-#      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: 27017
-#      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: admin
-#      MONGODB_REPLICA_SET_KEY: replicasetkey123
 
   kowl:
     image: quay.io/cloudhut/kowl:master-d782eab
@@ -215,3 +174,8 @@ services:
       STATUS_STORAGE_TOPIC: debezium_connect_statuses
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
+
+networks:
+  dev:
+    name: dev
+    driver: bridge
