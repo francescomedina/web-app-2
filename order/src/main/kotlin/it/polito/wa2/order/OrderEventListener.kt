@@ -31,7 +31,6 @@ class OrderEventListener@Autowired constructor(
     @KafkaListener(topics = ["warehouse.topic"])
     suspend fun orderConfirmed(
         @Payload payload: String,
-        @Header("aggregate_id") aggregateId: String,
         @Header("message_id") messageId: String,
         @Header("type") type: String
     ) {
@@ -42,7 +41,7 @@ class OrderEventListener@Autowired constructor(
             order.status = "ISSUED"
             orderService.updateOrder(
                 null,
-                aggregateId,
+                messageId,
                 order,
                 null,
                 true
@@ -53,7 +52,6 @@ class OrderEventListener@Autowired constructor(
     @KafkaListener(topics = ["warehouse.topic"])
     suspend fun orderCanceled(
         @Payload payload: String,
-        @Header("aggregate_id") aggregateId: String,
         @Header("message_id") messageId: String,
         @Header("type") type: String
     ) {
@@ -64,7 +62,7 @@ class OrderEventListener@Autowired constructor(
             order.status = "CANCELED"
             orderService.updateOrder(
                 null,
-                aggregateId,
+                messageId,
                 order,
                 null,
                 true

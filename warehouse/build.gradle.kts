@@ -37,6 +37,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")
     implementation("org.springframework.kafka:spring-kafka:2.7.6")
     implementation("org.springframework.cloud:spring-cloud-starter-sleuth:3.0.3")
+    implementation("com.google.code.gson:gson:2.8.5")
 
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

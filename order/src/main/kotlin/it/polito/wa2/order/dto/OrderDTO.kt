@@ -11,7 +11,7 @@ data class OrderDTO(
     var status: String? = null,
     @field:NotBlank(message = "Buyer is required")
     var buyer: String? = null,
-    @field:NotBlank(message = "List of products is required")
+
     var products: List<ProductDTO>? = emptyList(),
 )
 

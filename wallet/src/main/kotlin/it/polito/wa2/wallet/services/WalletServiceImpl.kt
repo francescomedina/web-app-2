@@ -1,5 +1,7 @@
 package it.polito.wa2.wallet.services
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.wallet.repositories.WalletRepository
@@ -11,6 +13,7 @@ import it.polito.wa2.wallet.dto.toTransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.TransactionRepository
+import it.polito.wa2.wallet.utils.ObjectIdTypeAdapter
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
@@ -138,11 +141,12 @@ class WalletServiceImpl(
             val transactionCreated = transactionRepository.save(newTransaction).onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "TRANSACTION NOT PERSISTED")
             }.awaitSingleOrNull()
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             transactionCreated?.let {
                 eventPublisher.publish(
                     "wallet.topic",
                     transactionCreated.id.toString(),
-                    transactionCreated.toString(),
+                    gson.toJson(transactionCreated),
                     "TRANSACTION SUCCESS"
                 )
                 return it.toTransactionDTO()

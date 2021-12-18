@@ -1,5 +1,7 @@
 package it.polito.wa2.order.services
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.order.domain.OrderEntity
@@ -7,6 +9,7 @@ import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
+import it.polito.wa2.order.utils.ObjectIdTypeAdapter
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
@@ -44,11 +47,12 @@ class OrderServiceImpl(
             val orderCreated = orderRepository.save(order).onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
             }.awaitSingleOrNull()
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             orderCreated?.let {
                 eventPublisher.publish(
                     "order.topic",
                     orderCreated.id.toString(),
-                    orderCreated.toString(),
+                    gson.toJson(orderCreated),
                     "ORDER_CREATED"
                 )
                 return mono { it.toOrderDTO() }

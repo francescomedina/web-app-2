@@ -43,6 +43,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-stream")
     implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
     implementation("org.springdoc:springdoc-openapi-webflux-ui:1.5.9")
+    implementation("com.google.code.gson:gson:2.8.5")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.4")
     implementation("org.springframework.kafka:spring-kafka:2.7.6")
