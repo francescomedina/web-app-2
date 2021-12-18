@@ -8,8 +8,8 @@ import javax.validation.constraints.NotBlank
 data class ProductDTO(
     var id: ObjectId? = null,
 
-    @field:NotBlank(message = "Amount is required")
-    var amount: BigDecimal? = null,
+    @field:NotBlank(message = "Quantity is required")
+    var quantity: Int? = null,
     @field:NotBlank(message = "Price is required")
     var price: BigDecimal? = null
 )
@@ -17,7 +17,7 @@ data class ProductDTO(
 fun ProductEntity.toOrderDTO(): ProductDTO {
     return ProductDTO(
         id = id,
-        amount = amount,
+        quantity = quantity,
         price = price
     )
 }

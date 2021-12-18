@@ -2,37 +2,34 @@
   {
     "_class": "it.polito.wa2.catalog.domain.UserEntity",
     "address": "indirizzo",
-    "email": "banca@email.com",
     "isEnable": true,
     "name": "Banca Italia",
     "password": "{bcrypt}$2a$10$CJY4BrfdDSo8w/uDrazil.ohrAW.OiYzb2yEUBqwbLbWdTqRcCeBy",
     "roles": "CUSTOMER,ADMIN",
     "surname": "s.p.a",
-    "username": "banca",
+    "username": "banca@email.com",
     "createdDate": "2021-12-15T01:39:14.869Z"
   },
   {
     "_class": "it.polito.wa2.catalog.domain.UserEntity",
     "address": "indirizzo",
-    "email": "banca@email.com",
     "isEnable": true,
     "name": "Banca Italia",
     "password": "{bcrypt}$2a$10$CJY4BrfdDSo8w/uDrazil.ohrAW.OiYzb2yEUBqwbLbWdTqRcCeBy",
     "roles": "CUSTOMER,ADMIN",
     "surname": "s.p.a",
-    "username": "banca",
+    "username": "banca2@email.com",
     "createdDate": "2021-12-15T01:39:14.869Z"
   },
   {
     "_class": "it.polito.wa2.catalog.domain.UserEntity",
     "address": "indirizzo",
-    "email": "banca@email.com",
     "isEnable": true,
     "name": "Banca Italia",
     "password": "{bcrypt}$2a$10$CJY4BrfdDSo8w/uDrazil.ohrAW.OiYzb2yEUBqwbLbWdTqRcCeBy",
     "roles": "CUSTOMER,ADMIN",
     "surname": "s.p.a",
-    "username": "banca",
+    "username": "banca3@email.com",
     "createdDate": "2021-12-15T01:39:14.869Z"
   }
 ]

@@ -11,8 +11,6 @@ import java.time.LocalDateTime
 data class UserDetailsDTO(
     private val _username: String = "",
     private val _password: String = "",
-
-       private val _email: String = "",
     private val _roles: Set<Rolename>,
     private val accountNonExpired: Boolean = true,
     private val accountNonLocked: Boolean = true,
@@ -37,8 +35,6 @@ data class UserDetailsDTO(
     override fun getUsername(): String {
         return _username
     }
-
-    val email: String get() = _email
 
     val roles: String
         get() {
@@ -82,7 +78,6 @@ fun UserEntity.toUserDetailsDTO() = UserDetailsDTO(
     _username = username,
     _password = password,
     _roles = getRolenames(),
-    _email = email,
     isEnable = isEnable,
     accountNonExpired = true,
     accountNonLocked = true,
@@ -96,7 +91,6 @@ fun UserEntity.toUserDetailsDTO() = UserDetailsDTO(
 fun UserDetailsDTO.toUserEntity() = UserEntity(
     username = username,
     password = password,
-    email = email,
     roles = roles,
     createdDate = LocalDateTime.now(),
     isEnable = isEnabled,

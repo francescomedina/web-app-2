@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import it.polito.wa2.warehouse.persistence.WarehouseRepository
+import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
+import it.polito.wa2.warehouse.repository.WarehouseRepository
 import it.polito.wa2.warehouse.utils.ObjectIdTypeAdapter
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitSingleOrNull
@@ -34,8 +35,8 @@ data class Result(
 data class ProductEntity(
     @JsonProperty("id")
     var id: ObjectId,
-    @JsonProperty("amount")
-    var amount: BigDecimal,
+    @JsonProperty("quantity")
+    var quantity: Int,
     @JsonProperty("price")
     var price: BigDecimal
 )
@@ -56,6 +57,7 @@ data class OrderEntity(
 class WarehouseEventListener @Autowired constructor(
     errorProducer: ErrorProducer,
     warehouseRepository: WarehouseRepository,
+    productAvailabilityRepository: ProductAvailabilityRepository,
     @Value("\${topics.out}")
     private val topicTarget: String,
     @Value("\${topics.out-error}")
@@ -66,11 +68,13 @@ class WarehouseEventListener @Autowired constructor(
     private val errorProducer: ErrorProducer
     private val kafkaTemplate: KafkaTemplate<String, String>
     private val warehouseRepository: WarehouseRepository
+    private val productAvailabilityRepository: ProductAvailabilityRepository
 
     init {
         this.errorProducer = errorProducer
         this.kafkaTemplate = kafkaTemplate
         this.warehouseRepository = warehouseRepository
+        this.productAvailabilityRepository = productAvailabilityRepository
     }
 
     @KafkaListener(topics = ["\${topics.in}"])
@@ -81,13 +85,11 @@ class WarehouseEventListener @Autowired constructor(
     ) {
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
-//        val mapper = ObjectMapper()
-//        val order = mapper.readValue(genericMessage.payload.toString(), OrderEntity::class.java)
         val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
         logger.info("Received: $order")
         kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY AVAILABLE"))))
         order.products.map {
-            val warehouses = warehouseRepository.findAllByProductIdAndAmountGreaterThanEqual(it.id,it.amount)
+            val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
             if(warehouses == null){
                 kafkaTemplate.send(ProducerRecord("order.topic", messageId, Result(order,"QUANTITY UNAVAILABLE").toString()))
             }

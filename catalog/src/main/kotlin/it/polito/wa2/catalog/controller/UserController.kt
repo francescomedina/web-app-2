@@ -41,7 +41,6 @@ class UserController(
             val userDTO = UserDetailsDTO(
                 _username = data.username,
                 _password = encoder.encode(data.password),
-                _email = data.email,
                 _roles = setOf(Rolename.CUSTOMER),
                 isEnable = false,
                 name = data.name,

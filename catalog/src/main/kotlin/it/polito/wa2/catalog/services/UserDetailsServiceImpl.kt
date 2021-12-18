@@ -98,7 +98,7 @@ class UserDetailsServiceImpl(
         ).token
 
         val endpoint = "http://localhost:$port/auth/registrationConfirm?token=$token"
-        mailService.sendMessage(userDetailsDTO.email, "Confirm Registration", endpoint)
+        mailService.sendMessage(userDetailsDTO.username, "Confirm Registration", endpoint)
     }
 
     /**

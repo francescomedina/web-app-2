@@ -17,8 +17,6 @@ data class UserEntity(
     val username: String,
     var password: String = "",
 
-    @Indexed(unique = true, name = "unique-email")
-    val email: String = "",
     var roles: String = "",
 
     val createdDate: LocalDateTime = LocalDateTime.now(),

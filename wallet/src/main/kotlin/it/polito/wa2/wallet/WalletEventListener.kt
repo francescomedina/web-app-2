@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import it.polito.wa2.wallet.dto.TransactionDTO
+import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.services.WalletServiceImpl
@@ -29,8 +30,8 @@ import java.math.BigDecimal
 data class ProductEntity(
     @JsonProperty("id")
     var id: ObjectId,
-    @JsonProperty("amount")
-    var amount: BigDecimal,
+    @JsonProperty("quantity")
+    var quantity: Int,
     @JsonProperty("price")
     var price: BigDecimal
 )
@@ -77,20 +78,23 @@ class WalletEventListener @Autowired constructor(
     ) {
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
-        logger.info("Received Wallet: $response")
-//        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-//        logger.info("Received2: $order")
+        logger.info("Received Wallet: ${response.order.buyer}")
         runBlocking {
-            val senderWallet = walletRepository.findByCustomerUsername(response.order.buyer).awaitSingleOrNull()
-            walletService.createTransaction(
-                null,
-                TransactionDTO(
-                    amount = BigDecimal(124),
-                    senderWalletId = senderWallet!!.id,
-                    receiverWalletId = ObjectId("61bde6858a44fed22cc86135")
+            val senderWallet = walletRepository.findOneByCustomerUsername(response.order.buyer)
+            logger.info("Received Wallet: $senderWallet")
+            senderWallet.let {
+                logger.info("Received Wallet: ${senderWallet.toWalletDTO()}")
+                walletService.createTransaction(
+                    null,
+                    TransactionDTO(
+                        amount = BigDecimal(124),
+                        senderWalletId = senderWallet.id,
+                        receiverWalletId = ObjectId("61be08d04e6ebd990b0fa5db")
+                    )
+                    ,true
                 )
-                ,true
-            )
+            }
+
         }
     }
 }

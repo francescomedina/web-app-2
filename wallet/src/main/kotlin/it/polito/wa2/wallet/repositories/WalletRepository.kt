@@ -6,6 +6,6 @@ import reactor.core.publisher.Mono
 
 interface WalletRepository : ReactiveMongoRepository<WalletEntity, String> {
 
-    fun findByCustomerUsername(customerUsername: String): Mono<WalletEntity?>
+    fun findOneByCustomerUsername(customerUsername: String): WalletEntity
 
 }

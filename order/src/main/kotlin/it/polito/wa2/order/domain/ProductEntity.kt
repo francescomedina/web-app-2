@@ -7,6 +7,6 @@ import java.math.BigDecimal
 data class ProductEntity (
     @Id
     var id: ObjectId? = ObjectId.get(),
-    var amount: BigDecimal? = null,
+    var quantity: Int? = null,
     var price: BigDecimal? = null,
 )

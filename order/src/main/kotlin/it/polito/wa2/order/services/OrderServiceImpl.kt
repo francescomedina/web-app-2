@@ -41,7 +41,7 @@ class OrderServiceImpl(
                 buyer = userInfoJWT.username,
                 status = "ISSUING",
                 products = orderDTO.products?.map {
-                    ProductEntity(it.id,it.amount,it.price)
+                    ProductEntity(it.id,it.quantity,it.price)
                 }?.toList()
             )
             val orderCreated = orderRepository.save(order).onErrorMap {
