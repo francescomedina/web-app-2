@@ -28,5 +28,5 @@ data class OutboxEvent (
 
     val timestamp: Instant = now(),
 
-    val type: String,
+    var type: String,
 )

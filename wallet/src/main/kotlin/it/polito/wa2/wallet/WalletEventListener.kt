@@ -10,6 +10,7 @@ import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.services.WalletServiceImpl
 import it.polito.wa2.wallet.utils.ObjectIdTypeAdapter
+import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -78,23 +79,77 @@ class WalletEventListener @Autowired constructor(
     ) {
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
-        logger.info("Received Wallet: ${response.order.buyer}")
-        runBlocking {
-            val senderWallet = walletRepository.findOneByCustomerUsername(response.order.buyer)
-            logger.info("Received Wallet: $senderWallet")
-            senderWallet.let {
-                logger.info("Received Wallet: ${senderWallet.toWalletDTO()}")
-                walletService.createTransaction(
-                    null,
-                    TransactionDTO(
-                        amount = BigDecimal(124),
+        logger.info("WALLET Received: ${response.response}")
+        if(response.response == "QUANTITY_AVAILABLE"){
+            logger.info("Received Wallet: ${response.order.buyer}")
+            runBlocking {
+                val senderWallet = walletRepository.findByCustomerUsername(response.order.buyer)?.awaitFirst()
+                logger.info("Received Wallet 2: $senderWallet")
+                senderWallet?.let {
+                    logger.info("Received Wallet 3: ${senderWallet.toWalletDTO()}")
+                    logger.info("Received Wallet 4: ${senderWallet.id}")
+                    logger.info("Received Wallet 5: ${ObjectId(senderWallet.id.toString())}")
+                    logger.info("Received Wallet 6: ${ObjectId("61be08d04e6ebd990b0fa5db")}")
+                    logger.info("Received Wallet 7: ${ObjectId("61be08d04e6ebd990b0fa5db").toString()}")
+                    val newTransaction = TransactionDTO(
+                        amount = BigDecimal(12),
                         senderWalletId = senderWallet.id,
-                        receiverWalletId = ObjectId("61be08d04e6ebd990b0fa5db")
+                        receiverWalletId = ObjectId("61be08d04e6ebd990b0fa5db"),
+                        reason = "Order Payment"
                     )
-                    ,true
-                )
+                    logger.info("CREATO QUETSO: ${newTransaction}")
+                    val transactionCreatedDTO = walletService.createTransaction(
+                        null,
+                        newTransaction
+                        ,true
+                    ).awaitSingleOrNull()
+                    logger.info("FINALE: ${transactionCreatedDTO}")
+                    logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
+                    transactionCreatedDTO?.let {
+                        eventPublisher.publish(
+                            "wallet.topic",
+                            transactionCreatedDTO.id.toString(),
+                            payload,
+                            "TRANSACTION_SUCCESS"
+                        )
+                    }
+                }
             }
-
+        }else if(response.response == "QUANTITY_INCREMENTED"){
+            logger.info("WALLET Received 45: ${response}")
+            runBlocking {
+                val senderWallet = walletRepository.findByCustomerUsername(response.order.buyer)?.awaitFirst()
+                logger.info("Received Wallet 2: $senderWallet")
+                senderWallet?.let {
+                    logger.info("Received Wallet 3: ${senderWallet.toWalletDTO()}")
+                    logger.info("Received Wallet 4: ${senderWallet.id}")
+                    logger.info("Received Wallet 5: ${ObjectId(senderWallet.id.toString())}")
+                    logger.info("Received Wallet 6: ${ObjectId("61be08d04e6ebd990b0fa5db")}")
+                    logger.info("Received Wallet 7: ${ObjectId("61be08d04e6ebd990b0fa5db").toString()}")
+                    val newTransaction = TransactionDTO(
+                        amount = BigDecimal(12),
+                        senderWalletId = ObjectId("61be08d04e6ebd990b0fa5db"),
+                        receiverWalletId = senderWallet.id,
+                        reason = "Order Refund"
+                    )
+                    val transactionCreatedDTO = walletService.createTransaction(
+                        null,
+                        newTransaction
+                        ,true
+                    ).awaitSingleOrNull()
+                    logger.info("FINALE: ${transactionCreatedDTO}")
+                    logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
+                    logger.info("FINALE 54: ${response.order}")
+                    transactionCreatedDTO?.let {
+                        eventPublisher.publish(
+                            "wallet.topic",
+                            response.order.id.toString(),
+                            gson.toJson(response.order),
+                            "REFUND_TRANSACTION_SUCCESS"
+                        )
+                    }
+                }
+            }
         }
     }
 }

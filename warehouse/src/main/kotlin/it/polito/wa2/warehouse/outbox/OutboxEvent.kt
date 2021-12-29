@@ -24,4 +24,8 @@ data class OutboxEvent (
 
     @Field(name = "headers")
     var headers: String? = null,
+
+    val timestamp: Instant = Instant.now(),
+
+    var type: String,
 )

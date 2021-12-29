@@ -7,6 +7,7 @@ import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.WalletDTO
 import it.polito.wa2.wallet.services.WalletServiceImpl
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -107,7 +108,7 @@ class WalletController(
             transactionDTO.senderWalletId = senderId
 
             // Ask the service to create the transaction. Throw an exception if the user can't access to such information
-            val createdTransaction = walletServiceImpl.createTransaction(userInfoJWT, transactionDTO)
+            val createdTransaction = walletServiceImpl.createTransaction(userInfoJWT, transactionDTO).awaitSingleOrNull()
 
             // Return a 201 with inside the transaction created
             return ResponseEntity.status(HttpStatus.CREATED).body(createdTransaction)

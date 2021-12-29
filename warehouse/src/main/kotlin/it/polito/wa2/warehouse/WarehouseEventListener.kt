@@ -83,47 +83,41 @@ class WarehouseEventListener @Autowired constructor(
         @Header("message_id") messageId: String,
         @Header("type") type: String
     ) {
-        val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-        val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
-        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-        logger.info("Received: $order")
-        kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY AVAILABLE"))))
-        order.products.map {
-            val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
-            if(warehouses == null){
-                kafkaTemplate.send(ProducerRecord("order.topic", messageId, Result(order,"QUANTITY UNAVAILABLE").toString()))
-            }
+        if(type == "ORDER_CREATED"){
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
+            val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+            logger.info("Received: $order")
+            kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
         }
+        else if(type == "ORDER_CANCELED"){
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
+            val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+            logger.info("Received: $order")
+            kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY_INCREMENTED"))))
+        }
+//        order.products.map {
+//            val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
+//            if(warehouses == null){
+//                kafkaTemplate.send(ProducerRecord("order.topic", messageId, Result(order,"QUANTITY UNAVAILABLE").toString()))
+//            }
+//        }
 //        kafkaTemplate.send(ProducerRecord("warehouse.topic", aggregateId, Result(order,"QUANTITY AVAILABLE").toString()))
     }
 
     @KafkaListener(topics = ["wallet.topic"])
     fun decrementQuantity(
         @Payload payload: String,
-        @Header("message_id") messageId: String,
         @Header("type") type: String
     ) {
-//        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
-//        logger.info("Received: ${message.payload}")
-
-//        if(false){
-//            exampleService.addExample(topicTarget,ExampleEntity("Quantity Available"))
-//        }else{
-//            errorProducer.produce(errorTopicTarget,"123", message.payload)
-//        }
-        val key = messageId + '_' + type
-        kafkaTemplate.send(ProducerRecord("warehouse.topic", key, payload))
+        logger.info("WAREHOUSE_2 Received: ${type}")
+        logger.info("WAREHOUSE_2 Received: ${payload}")
+        if(type == "TRANSACTION_SUCCESS"){
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
+            val res = gson.fromJson(genericMessage.payload.toString(),Result::class.java)
+            kafkaTemplate.send(ProducerRecord("warehouse.topic", res.order.id.toString(), gson.toJson(Result(res.order,"QUANTITY_DECREMENTED"))))
+        }
     }
-
-//    @KafkaListener(topics = ["\${topics.in-error}"])
-//    fun error(message: Message<String>) {
-////        message.headers.forEach { header, value -> logger.info("Header $header: $value") }
-////        logger.info("Received: ${message.payload}")
-//
-//        if(false){
-//            exampleService.addExample(topicTarget,ExampleEntity("Quantity Available"))
-//        }else{ // Quantità non disponibile
-//            errorProducer.produce("order.topic", "123",message.payload)
-//        }
-//    }
 }

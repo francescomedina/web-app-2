@@ -1,6 +1,7 @@
 package it.polito.wa2.warehouse.outbox
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -18,17 +19,17 @@ class OutboxEventPublisher @Autowired constructor(
 		this.objectMapper = objectMapper
 	}
 
-	fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
+	suspend fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
 		try {
 //			val payload = objectMapper.writeValueAsString(wallet)
-			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload)
+			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
 			val headers: MutableMap<String, String> = HashMap()
 			headers["aggregate_id"] = aggregateId
 			headers["message_id"] = outboxEvent.messageId.toString()
 			headers["type"] = type
 			val encodedHeaders = objectMapper.writeValueAsString(headers)
 			outboxEvent.headers = encodedHeaders
-			outboxEventRepository.save(outboxEvent)
+			outboxEventRepository.save(outboxEvent).awaitSingle()
 		} catch (ex: Exception) {
 			throw RuntimeException(ex)
 		}

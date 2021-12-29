@@ -22,5 +22,5 @@ data class TransactionEntity(
 
     var receiverWalletId: ObjectId,
 
-    val reason : String = ""
+    var reason : String = ""
 )

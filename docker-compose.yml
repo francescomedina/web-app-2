@@ -174,8 +174,3 @@ services:
       STATUS_STORAGE_TOPIC: debezium_connect_statuses
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
-
-networks:
-  dev:
-    name: dev
-    driver: bridge

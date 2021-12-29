@@ -18,8 +18,7 @@ data class TransactionDTO(
 
     var senderWalletId: ObjectId? = null,
 
-    @field:NotNull(message = "Missing required body parameter: receiverWalletId")
-    val receiverWalletId: ObjectId?,
+    var receiverWalletId: ObjectId? = null,
 
     @field:NotBlank(message = "Reason field is required")
     val reason : String = ""

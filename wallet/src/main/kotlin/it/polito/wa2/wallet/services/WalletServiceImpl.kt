@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.wallet.WalletEventListener
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.domain.WalletEntity
@@ -18,6 +19,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -75,6 +77,8 @@ class WalletServiceImpl(
         throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see this wallet")
     }
 
+    private val logger = LoggerFactory.getLogger(WalletServiceImpl::class.java)
+
     /**
      * Create a transaction between two wallet (senderWallet to receiverWallet) with a given amount
      * @param userInfoJWT : information about the user that make the request
@@ -82,8 +86,10 @@ class WalletServiceImpl(
      * @return the new transaction created
      */
     @Transactional // Since we update multiple documents we annotated with transactional
-    override suspend fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): TransactionDTO {
+    override suspend fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): Mono<TransactionDTO> {
         // Check if the senderWalletId and the receiverWalletId are the same
+        logger.info("RICEVENTE: ${transactionDTO.receiverWalletId}")
+        logger.info("RICEVENTE: ${transactionDTO.receiverWalletId.toString()}")
         if (transactionDTO.senderWalletId.toString() == transactionDTO.receiverWalletId.toString()) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "The transaction has the same sender and receiver walletId")
         }
@@ -99,9 +105,9 @@ class WalletServiceImpl(
         val senderWallet = walletRepository.findById(transactionDTO.senderWalletId.toString()).awaitSingleOrNull()
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Sender wallet not found")
 
+        logger.info("Transaction DTO: ${senderWallet}")
         val receiverWallet = walletRepository.findById(transactionDTO.receiverWalletId.toString()).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Receiver wallet not found")
-
+        logger.info("Transaction DTO: ${receiverWallet}")
         // Check if the owner of the senderWallet is the same of the JWT
         if (!trusted && userInfoJWT!=null && senderWallet.customerUsername != userInfoJWT.username) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Only the wallet owner can create transaction")
@@ -114,7 +120,7 @@ class WalletServiceImpl(
         }
 
         // Additional check that the required fields didn't change
-        if (senderWallet.id != null && receiverWallet.id != null) {
+        if (senderWallet.id != null && receiverWallet?.id != null) {
 
             // Amount can be positive or negative based on if the transaction is made by the Admin or by the Customer
             // With Abs I can include both cases
@@ -141,15 +147,8 @@ class WalletServiceImpl(
             val transactionCreated = transactionRepository.save(newTransaction).onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "TRANSACTION NOT PERSISTED")
             }.awaitSingleOrNull()
-            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             transactionCreated?.let {
-                eventPublisher.publish(
-                    "wallet.topic",
-                    transactionCreated.id.toString(),
-                    gson.toJson(transactionCreated),
-                    "TRANSACTION SUCCESS"
-                )
-                return it.toTransactionDTO()
+                return mono { it.toTransactionDTO() }
             }
         }
 
