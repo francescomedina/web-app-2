@@ -69,8 +69,9 @@ class OrderEventListener@Autowired constructor(
 
     @KafkaListener(topics = ["warehouse.topic"])
     fun orderConfirmed(
-        @Payload payload: String
+        @Payload payload: String,
     ) {
+
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
         logger.info("ORDER Received: ${response.response}")
@@ -78,6 +79,22 @@ class OrderEventListener@Autowired constructor(
             val orderDTO = OrderDTO(
                 response.order.id,
                 "ISSUED",
+                response.order.buyer,
+                response.order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
+            )
+            runBlocking {
+                orderService.updateOrder(
+                    null,
+                    orderDTO.id.toString(),
+                    orderDTO,
+                    null,
+                    true
+                )
+            }
+        }else if(response.response == "QUANTITY_UNAVAILABLE"){
+            val orderDTO = OrderDTO(
+                response.order.id,
+                "FAILED-QUANTITY_UNAVAILABLE",
                 response.order.buyer,
                 response.order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
             )
@@ -107,6 +124,27 @@ class OrderEventListener@Autowired constructor(
             val orderDTO = OrderDTO(
                 order.id,
                 "CANCELED",
+                order.buyer,
+                order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
+            )
+            logger.info("ORDER Received 2: $orderDTO")
+            runBlocking {
+                orderService.updateOrder(
+                    null,
+                    orderDTO.id.toString(),
+                    orderDTO,
+                    null,
+                    true
+                )
+            }
+        }else if(type == "CREDIT_UNAVAILABLE"){
+            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            val genericMessage = gson.fromJson(payload, GenericMessage::class.java) // uso GenericMessage perché nel json c'è anche lo schema: {}
+            val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+            logger.info("ORDER Received: $order")
+            val orderDTO = OrderDTO(
+                order.id,
+                "FAILED-CREDIT_UNAVAILABLE",
                 order.buyer,
                 order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
             )

@@ -8,11 +8,11 @@ import org.springframework.data.mongodb.core.mapping.Document
 @Document(collection = "product-availability")
 data class ProductAvailabilityEntity (
     @Id
-    val id: ObjectId = ObjectId.get(),
+    var id: ObjectId = ObjectId.get(),
 
-    val productId: ObjectId,
-    val warehouseId: ObjectId,
-    val quantity: Int,
-    val min_quantity: Int
+    var productId: ObjectId,
+    var warehouseId: ObjectId,
+    var quantity: Int,
+    var min_quantity: Int
 
 )

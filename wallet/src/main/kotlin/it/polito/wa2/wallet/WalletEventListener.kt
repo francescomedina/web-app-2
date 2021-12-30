@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.util.http.HttpErrorInfo
 import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
@@ -98,19 +100,28 @@ class WalletEventListener @Autowired constructor(
                         reason = "Order Payment"
                     )
                     logger.info("CREATO QUETSO: ${newTransaction}")
-                    val transactionCreatedDTO = walletService.createTransaction(
-                        null,
-                        newTransaction
-                        ,true
-                    ).awaitSingleOrNull()
-                    logger.info("FINALE: ${transactionCreatedDTO}")
-                    logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
-                    transactionCreatedDTO?.let {
+                    try {
+                        val transactionCreatedDTO = walletService.createTransaction(
+                            null,
+                            newTransaction
+                            ,true
+                        ).awaitSingleOrNull()
+                        logger.info("FINALE: ${transactionCreatedDTO}")
+                        logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
+                        transactionCreatedDTO?.let {
+                            eventPublisher.publish(
+                                "wallet.topic",
+                                transactionCreatedDTO.id.toString(),
+                                payload,
+                                "TRANSACTION_SUCCESS"
+                            )
+                        }
+                    }catch (e: ErrorResponse){
                         eventPublisher.publish(
                             "wallet.topic",
-                            transactionCreatedDTO.id.toString(),
-                            payload,
-                            "TRANSACTION_SUCCESS"
+                            response.order.id.toString(),
+                            gson.toJson(response.order),
+                            "CREDIT_UNAVAILABLE"
                         )
                     }
                 }
