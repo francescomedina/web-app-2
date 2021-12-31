@@ -11,6 +11,7 @@ import it.polito.wa2.warehouse.repository.WarehouseRepository
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
 import it.polito.wa2.warehouse.utils.ObjectIdTypeAdapter
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitSingleOrNull
 import kotlinx.coroutines.reactor.awaitSingle
@@ -133,10 +134,10 @@ class WarehouseEventListener @Autowired constructor(
     }
 
     @Transactional
-    fun saveOrderProducts(order: OrderEntity): Flux<ProductEntity> {
+    suspend fun saveOrderProducts(order: OrderEntity) {
         logger.info("ENTRATOOO CON $order")
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-        return Flux.fromIterable(order.products)
+/*        return Flux.fromIterable(order.products)
             .doOnNext {
                 logger.info("ENTRATO NEL DO ON NEXT $it")
                 runBlocking {
@@ -172,7 +173,53 @@ class WarehouseEventListener @Autowired constructor(
                         "QUANTITY_UNAVAILABLE"
                     )
                 }
+            }*/
+        return try {
+            order.products.asFlow().collect {
+                val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
+                logger.info("DO ON NEXT $productAvailabilityEntity")
+                Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
+                if(productAvailabilityEntity!=null){
+                    productAvailabilityEntity.quantity -= it.quantity
+                    productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
+                }
             }
+            logger.info("FLUX completato")
+            eventPublisher.publish(
+                "warehouse.topic",
+                order.id.toString(),
+                gson.toJson(order),
+                "QUANTITY_DECREMENTED"
+            )
+        } catch (e: Throwable) {
+            logger.info("ERRORE nel FLUX $e")
+            eventPublisher.publish(
+                "wallet.topic",
+                order.id.toString(),
+                gson.toJson(order),
+                "QUANTITY_UNAVAILABLE"
+            )
+        }
+/*        return order.products.asFlow()
+            .onEach {
+                val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
+                logger.info("DO ON NEXT $productAvailabilityEntity")
+                Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
+                if(productAvailabilityEntity!=null){
+                    productAvailabilityEntity.quantity -= it.quantity
+                    productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
+                }
+            }
+            .catch {
+                logger.info("ERRORE nel FLUX")
+                eventPublisher.publish(
+                    "wallet.topic",
+                    order.id.toString(),
+                    gson.toJson(order),
+                    "QUANTITY_UNAVAILABLE"
+                )
+            }
+            .collect {  }*/
     }
 
 
