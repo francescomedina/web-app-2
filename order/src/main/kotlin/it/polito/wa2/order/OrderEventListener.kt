@@ -70,17 +70,18 @@ class OrderEventListener@Autowired constructor(
     @KafkaListener(topics = ["warehouse.topic"])
     fun orderConfirmed(
         @Payload payload: String,
+        @Header("type") type: String?
     ) {
-
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-        val response = gson.fromJson(payload, Response::class.java)
-        logger.info("ORDER Received: ${response.response}")
-        if(response.response == "QUANTITY_DECREMENTED"){
+        val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
+        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+        logger.info("ORDER Received: ${order}")
+        if(type != null && type == "QUANTITY_DECREMENTED"){
             val orderDTO = OrderDTO(
-                response.order.id,
+                order.id,
                 "ISSUED",
-                response.order.buyer,
-                response.order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
+                order.buyer,
+                order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
             )
             runBlocking {
                 orderService.updateOrder(
@@ -91,12 +92,12 @@ class OrderEventListener@Autowired constructor(
                     true
                 )
             }
-        }else if(response.response == "QUANTITY_UNAVAILABLE"){
+        }else if(type == "QUANTITY_UNAVAILABLE"){
             val orderDTO = OrderDTO(
-                response.order.id,
+                order.id,
                 "FAILED-QUANTITY_UNAVAILABLE",
-                response.order.buyer,
-                response.order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
+                order.buyer,
+                order.products.map { ProductEntity(it.id,it.quantity,it.price).toOrderDTO() }.toList()
             )
             runBlocking {
                 orderService.updateOrder(

@@ -14,6 +14,7 @@ import it.polito.wa2.warehouse.utils.ObjectIdTypeAdapter
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitSingleOrNull
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.bson.types.ObjectId
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.util.Assert
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.core.publisher.toFlux
 import java.math.BigDecimal
 import java.util.*
@@ -103,8 +105,7 @@ class WarehouseEventListener @Autowired constructor(
     @KafkaListener(topics = ["\${topics.in}"])
     fun listen(
         @Payload payload: String,
-        @Header("message_id") messageId: String,
-        @Header("type") type: String
+        @Header("type") type: String?
     ) {
         if(type == "ORDER_CREATED"){
             val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
@@ -112,39 +113,46 @@ class WarehouseEventListener @Autowired constructor(
             val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
             logger.info("Received: $order")
             order.products.map {
-                val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
-                if(warehouses == null){
-                    kafkaTemplate.send(ProducerRecord("order.topic", messageId, gson.toJson(Result(order,"QUANTITY_UNAVAILABLE"))))
+                runBlocking {
+                    val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
+                    logger.info("WAREHOUSE ESISTEEEEEEEEEEEEEEEEE: $warehouses")
+                    if(warehouses == null){
+                        kafkaTemplate.send(ProducerRecord("order.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_UNAVAILABLE"))))
+                    }
                 }
             }
-            kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
+            kafkaTemplate.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
         }
         else if(type == "ORDER_CANCELED"){
             val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
             logger.info("Received: $order")
-            kafkaTemplate.send(ProducerRecord("warehouse.topic", messageId, gson.toJson(Result(order,"QUANTITY_INCREMENTED"))))
+            kafkaTemplate.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_INCREMENTED"))))
         }
     }
 
     @Transactional
     fun saveOrderProducts(order: OrderEntity): Flux<ProductEntity> {
+        logger.info("ENTRATOOO CON $order")
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-        return Flux.just(order.products)
-            .flatMapIterable { it }
+        return Flux.fromIterable(order.products)
             .doOnNext {
-                val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
-                Assert.isTrue(productAvailabilityEntity!=null, "No warehouse found for this product")
-                if(productAvailabilityEntity!=null){
-                    Assert.isTrue(productAvailabilityEntity.quantity - it.quantity >= 0, "Quantity unavailable")
-                    productAvailabilityEntity.quantity -= it.quantity
-                    runBlocking {
-                        productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
+                logger.info("ENTRATO NEL DO ON NEXT $it")
+                runBlocking {
+                    val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
+                    logger.info("DO ON NEXT $productAvailabilityEntity")
+                    Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
+                    if(productAvailabilityEntity!=null){
+                        productAvailabilityEntity.quantity -= it.quantity
+                        runBlocking {
+                            productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
+                        }
                     }
                 }
             }
             .doOnComplete {
+                logger.info("FLUX completato")
                 runBlocking {
                     eventPublisher.publish(
                         "warehouse.topic",
@@ -155,6 +163,7 @@ class WarehouseEventListener @Autowired constructor(
                 }
             }
             .doOnError {
+                logger.info("ERRORE nel FLUX")
                 runBlocking {
                     eventPublisher.publish(
                         "wallet.topic",
@@ -166,7 +175,7 @@ class WarehouseEventListener @Autowired constructor(
             }
     }
 
-    @Transactional
+
     @KafkaListener(topics = ["wallet.topic"])
     fun decrementQuantity(
         @Payload payload: String,
@@ -178,7 +187,7 @@ class WarehouseEventListener @Autowired constructor(
             val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val res = gson.fromJson(genericMessage.payload.toString(),Result::class.java)
-            saveOrderProducts(res.order)
+            saveOrderProducts(res.order).subscribe()
         }
     }
 }

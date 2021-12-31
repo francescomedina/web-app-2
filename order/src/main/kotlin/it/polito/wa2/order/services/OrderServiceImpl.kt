@@ -39,6 +39,7 @@ class OrderServiceImpl(
      */
     override suspend fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
 
+        /// TODO TRANSACTIONAL
         if (userInfoJWT.username == orderDTO.buyer) {
             val order = OrderEntity(
                 buyer = userInfoJWT.username,

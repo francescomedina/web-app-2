@@ -79,6 +79,7 @@ class WalletEventListener @Autowired constructor(
     fun listen(
         @Payload payload: String
     ) {
+        /// TODO TRANSACTIONAL
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
         logger.info("WALLET Received: ${response.response}")

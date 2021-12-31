@@ -9,7 +9,7 @@
   },
   {
     "_class": "it.polito.wa2.wallet.domain.WalletEntity",
-    "amount": "123",
+    "amount": "99999",
     "customerUsername": "pacimedina@gmail.com",
     "purchases": [],
     "recharges": []
