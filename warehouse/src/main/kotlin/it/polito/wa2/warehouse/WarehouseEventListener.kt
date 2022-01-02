@@ -224,7 +224,7 @@ class WarehouseEventListener @Autowired constructor(
 
 
     @KafkaListener(topics = ["wallet.topic"])
-    fun decrementQuantity(
+    suspend fun decrementQuantity(
         @Payload payload: String,
         @Header("type") type: String
     ) {
@@ -234,7 +234,7 @@ class WarehouseEventListener @Autowired constructor(
             val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val res = gson.fromJson(genericMessage.payload.toString(),Result::class.java)
-            saveOrderProducts(res.order).subscribe()
+            saveOrderProducts(res.order)
         }
     }
 }

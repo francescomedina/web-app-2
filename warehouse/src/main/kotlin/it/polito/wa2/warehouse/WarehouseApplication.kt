@@ -16,12 +16,12 @@ import org.springframework.transaction.reactive.TransactionalOperator
 class WarehouseApplication {
 
     @Bean
-    fun transactionalOperator(tmx: ReactiveTransactionManager) : TransactionalOperator {
+    fun transactionalOperator(tmx: ReactiveMongoTransactionManager) : TransactionalOperator {
         return TransactionalOperator.create(tmx)
     }
 
     @Bean
-    fun transactionManager(dbf: ReactiveMongoDatabaseFactory) : ReactiveTransactionManager {
+    fun transactionManager(dbf: ReactiveMongoDatabaseFactory) : ReactiveMongoTransactionManager {
         return ReactiveMongoTransactionManager(dbf)
     }
 }

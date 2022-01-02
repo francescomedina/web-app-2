@@ -11,6 +11,8 @@ import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
 import it.polito.wa2.order.utils.ObjectIdTypeAdapter
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
@@ -19,8 +21,11 @@ import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.util.Assert
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.lang.RuntimeException
 import java.util.*
 
 @Service
@@ -31,6 +36,22 @@ class OrderServiceImpl(
 ) : OrderService {
 
     private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
+
+    @Transactional
+    suspend fun saveOrder(order: OrderEntity) : Mono<OrderDTO>{
+        val orderCreated = orderRepository.save(order).onErrorResume {
+            throw RuntimeException("ORDER NOT CREATED")
+        }.awaitSingle()
+        val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+        eventPublisher.publish(
+            "order.topic",
+            orderCreated.id.toString(),
+            gson.toJson(orderCreated),
+            "ORDER_CREATED"
+        )
+        return mono { orderCreated.toOrderDTO() }
+    }
+
     /**
      * Create a order associated to a username
      * @param userInfoJWT : information about the user that make the request
@@ -38,8 +59,6 @@ class OrderServiceImpl(
      * @return the order created
      */
     override suspend fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
-
-        /// TODO TRANSACTIONAL
         if (userInfoJWT.username == orderDTO.buyer) {
             val order = OrderEntity(
                 buyer = userInfoJWT.username,
@@ -48,19 +67,9 @@ class OrderServiceImpl(
                     ProductEntity(it.id,it.quantity,it.price)
                 }?.toList()
             )
-            val orderCreated = orderRepository.save(order).onErrorMap {
+            saveOrder(order).onErrorResume {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
-            }.awaitSingleOrNull()
-            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-            orderCreated?.let {
-                eventPublisher.publish(
-                    "order.topic",
-                    orderCreated.id.toString(),
-                    gson.toJson(orderCreated),
-                    "ORDER_CREATED"
-                )
-                return mono { it.toOrderDTO() }
-            }
+            }.awaitSingle()
         }
 
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")

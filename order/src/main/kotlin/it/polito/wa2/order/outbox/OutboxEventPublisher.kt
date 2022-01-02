@@ -5,6 +5,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 
 @Component
 class OutboxEventPublisher @Autowired constructor(
@@ -19,19 +20,18 @@ class OutboxEventPublisher @Autowired constructor(
 		this.objectMapper = objectMapper
 	}
 
+	@Transactional
 	suspend fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
-		try {
 //			val payload = objectMapper.writeValueAsString(wallet)
-			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
-			val headers: MutableMap<String, String> = HashMap()
-			headers["aggregate_id"] = aggregateId
-			headers["message_id"] = outboxEvent.messageId.toString()
-			headers["type"] = type
-			val encodedHeaders = objectMapper.writeValueAsString(headers)
-			outboxEvent.headers = encodedHeaders
-			outboxEventRepository.save(outboxEvent).awaitSingle()
-		} catch (ex: Exception) {
-			throw RuntimeException(ex)
-		}
+		val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
+		val headers: MutableMap<String, String> = HashMap()
+		headers["aggregate_id"] = aggregateId
+		headers["message_id"] = outboxEvent.messageId.toString()
+		headers["type"] = type
+		val encodedHeaders = objectMapper.writeValueAsString(headers)
+		outboxEvent.headers = encodedHeaders
+		outboxEventRepository.save(outboxEvent).onErrorResume {
+			throw RuntimeException(it)
+		}.awaitSingle()
 	}
 }
