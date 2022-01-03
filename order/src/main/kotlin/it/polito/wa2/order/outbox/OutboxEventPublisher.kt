@@ -6,6 +6,7 @@ import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import reactor.core.publisher.Mono
 import java.lang.RuntimeException
 
 @Component
@@ -21,19 +22,15 @@ class OutboxEventPublisher @Autowired constructor(
 		this.objectMapper = objectMapper
 	}
 
-	@Transactional
-	suspend fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
-//			val payload = objectMapper.writeValueAsString(wallet)
-//		val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
-//		val headers: MutableMap<String, String> = HashMap()
-//		headers["aggregate_id"] = aggregateId
-//		headers["message_id"] = outboxEvent.messageId.toString()
-//		headers["type"] = type
-//		val encodedHeaders = objectMapper.writeValueAsString(headers)
-//		outboxEvent.headers = encodedHeaders
-//		outboxEventRepository.save(outboxEvent).onErrorResume {
-//			throw RuntimeException(it)
-//		}.awaitSingle()
-		throw RuntimeException("OUTBOX RUNTIMEEXECPTION LAUNCHED")
+	fun publish(channel: String?, aggregateId: String, payload: String, type: String): Mono<OutboxEvent> {
+		val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
+		val headers: MutableMap<String, String> = HashMap()
+		headers["aggregate_id"] = aggregateId
+		headers["message_id"] = outboxEvent.messageId.toString()
+		headers["type"] = type
+		val encodedHeaders = objectMapper.writeValueAsString(headers)
+		outboxEvent.headers = encodedHeaders
+		throw RuntimeException("CIAONEEEEE")
+//		return outboxEventRepository.save(outboxEvent)
 	}
 }

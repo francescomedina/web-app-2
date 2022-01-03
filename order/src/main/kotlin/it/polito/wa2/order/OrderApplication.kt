@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController
 @EnableEurekaClient
 @ComponentScan("it.polito.wa2")
 @RestController
-@EnableTransactionManagement
 class OrderApplication {
 
     /** START JAVA MAIL SENDER **/

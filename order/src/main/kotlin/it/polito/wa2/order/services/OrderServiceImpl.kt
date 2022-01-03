@@ -4,16 +4,13 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
-import it.polito.wa2.order.OrderEventListener
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.*
+import it.polito.wa2.order.outbox.OutboxEvent
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
 import it.polito.wa2.order.utils.ObjectIdTypeAdapter
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
@@ -21,35 +18,39 @@ import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.EnableTransactionManagement
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.util.Assert
+import org.springframework.transaction.reactive.TransactionalOperator
+import reactor.core.Disposable
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.lang.RuntimeException
 import java.util.*
 
 @Service
+@EnableTransactionManagement
 class OrderServiceImpl(
     val orderRepository: OrderRepository,
     val eventPublisher: OutboxEventPublisher,
-    val mailService: MailService
+    val mailService: MailService,
+    val transactionalOperator: TransactionalOperator
 ) : OrderService {
 
     private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
 
     @Transactional
-    suspend fun saveOrder(order: OrderEntity) : Mono<OrderDTO>{
-        val orderCreated = orderRepository.save(order).onErrorResume {
-            throw RuntimeException("ORDER NOT CREATED")
-        }.awaitSingle()
-        val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
-        eventPublisher.publish(
-            "order.topic",
-            orderCreated.id.toString(),
-            gson.toJson(orderCreated),
-            "ORDER_CREATED"
-        )
-        return mono { orderCreated.toOrderDTO() }
+    fun saveOrder(order: OrderEntity) : Flux<OutboxEvent> {
+        val tx = Flux.just(order)
+            .flatMap(orderRepository::save)
+            .flatMap {
+                val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+                eventPublisher.publish(
+                    "order.topic",
+                    it.id.toString(),
+                    gson.toJson(it),
+                    "ORDER_CREATED"
+                )
+            }
+        return transactionalOperator.execute { tx }
     }
 
     /**
@@ -67,12 +68,10 @@ class OrderServiceImpl(
                     ProductEntity(it.id,it.quantity,it.price)
                 }?.toList()
             )
-            saveOrder(order).onErrorResume {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT CREATED")
-            }.awaitSingle()
+            saveOrder(order).subscribe()
         }
 
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "PROVA You can't create order for another person")
 
     }
 
