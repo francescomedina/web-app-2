@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.warehouse.domain.ProductAvailabilityEntity
 import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.annotation.Id
+import org.springframework.http.HttpStatus
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.messaging.Message
@@ -71,24 +73,11 @@ data class OrderEntity(
 @Component
 @Transactional
 class WarehouseEventListener constructor(
-    val errorProducer: ErrorProducer,
-    val warehouseRepository: WarehouseRepository,
-    val warehouseServiceImpl: WarehouseServiceImpl,
-    val productServiceImpl: ProductServiceImpl,
     val productAvailabilityRepository: ProductAvailabilityRepository,
-    val transactionalOperator: TransactionalOperator,
     val eventPublisher: OutboxEventPublisher,
-    @Value("\${topics.out}")
-    private val topicTarget: String,
-    @Value("\${topics.out-error}")
-    private val errorTopicTarget: String,
     val kafkaTemplate: KafkaTemplate<String, String>
 ) {
     private val logger = LoggerFactory.getLogger(WarehouseEventListener::class.java)
-
-    fun updateQuantity(){
-        
-    }
 
     @KafkaListener(topics = ["\${topics.in}"])
     fun listen(
@@ -118,94 +107,36 @@ class WarehouseEventListener constructor(
         }
     }
 
-    @Transactional
-    suspend fun saveOrderProducts(order: OrderEntity) {
-        logger.info("ENTRATOOO CON $order")
-/*        return Flux.fromIterable(order.products)
+    /**
+     * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
+     */
+    fun updateQuantity(order: OrderEntity): Flux<ProductAvailabilityEntity> {
+        return Flux.fromIterable(order.products)
+            .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
             .doOnNext {
-                logger.info("ENTRATO NEL DO ON NEXT $it")
-                runBlocking {
-                    val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
-                    logger.info("DO ON NEXT $productAvailabilityEntity")
-                    Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
-                    if(productAvailabilityEntity!=null){
-                        productAvailabilityEntity.quantity -= it.quantity
-                        runBlocking {
-                            productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
-                        }
-                    }
-                }
+                Assert.isTrue(it!=null, "Product is no more available")
             }
-            .doOnComplete {
-                logger.info("FLUX completato")
-                runBlocking {
-                    eventPublisher.publish(
-                        "warehouse.topic",
-                        order.id.toString(),
-                        gson.toJson(order),
-                        "QUANTITY_DECREMENTED"
-                    )
-                }
+            .flatMap {
+                it!!.quantity -= it!!.quantity
+                productAvailabilityRepository.save(it)
+            }
+            .doOnNext {
+                eventPublisher.publish(
+                    "warehouse.topic",
+                    order.id.toString(),
+                    gson.toJson(order),
+                    "QUANTITY_DECREMENTED"
+                ).subscribe()
             }
             .doOnError {
-                logger.info("ERRORE nel FLUX")
-                runBlocking {
-                    eventPublisher.publish(
-                        "wallet.topic",
-                        order.id.toString(),
-                        gson.toJson(order),
-                        "QUANTITY_UNAVAILABLE"
-                    )
-                }
-            }*/
-        return try {
-            order.products.asFlow().collect {
-                val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
-                logger.info("DO ON NEXT $productAvailabilityEntity")
-                Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
-                if(productAvailabilityEntity!=null){
-                    productAvailabilityEntity.quantity -= it.quantity
-                    productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
-                }
-            }
-            logger.info("FLUX completato")
-            eventPublisher.publish(
-                "warehouse.topic",
-                order.id.toString(),
-                gson.toJson(order),
-                "QUANTITY_DECREMENTED"
-            )
-        } catch (e: Throwable) {
-            logger.info("ERRORE nel FLUX $e")
-            eventPublisher.publish(
-                "wallet.topic",
-                order.id.toString(),
-                gson.toJson(order),
-                "QUANTITY_UNAVAILABLE"
-            )
-        }
-/*        return order.products.asFlow()
-            .onEach {
-                val productAvailabilityEntity = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
-                logger.info("DO ON NEXT $productAvailabilityEntity")
-                Assert.isTrue(productAvailabilityEntity!=null, "WAREHOUSE-EXCEPTION Product is no more available, sending rollback wallet action")
-                if(productAvailabilityEntity!=null){
-                    productAvailabilityEntity.quantity -= it.quantity
-                    productAvailabilityRepository.save(productAvailabilityEntity).awaitSingle()
-                }
-            }
-            .catch {
-                logger.info("ERRORE nel FLUX")
                 eventPublisher.publish(
                     "wallet.topic",
                     order.id.toString(),
                     gson.toJson(order),
                     "QUANTITY_UNAVAILABLE"
-                )
+                ).subscribe()
             }
-            .collect {  }*/
     }
-
 
     @KafkaListener(topics = ["wallet.topic"])
     suspend fun decrementQuantity(
@@ -217,7 +148,7 @@ class WarehouseEventListener constructor(
         if(type == "TRANSACTION_SUCCESS"){
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val res = gson.fromJson(genericMessage.payload.toString(),Result::class.java)
-            saveOrderProducts(res.order)
+            updateQuantity(res.order)
         }
     }
 }

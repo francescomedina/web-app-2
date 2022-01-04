@@ -8,5 +8,5 @@ import reactor.core.publisher.Mono
 
 interface ProductAvailabilityRepository: ReactiveMongoRepository<ProductAvailabilityEntity, String> {
 
-    fun findOneByProductIdAndQuantityGreaterThanEqual (productId: ObjectId, quantity: Int) : Mono<ProductAvailabilityEntity?>?
+    fun findOneByProductIdAndQuantityGreaterThanEqual (productId: ObjectId, quantity: Int) : Mono<ProductAvailabilityEntity?>
 }
