@@ -1,16 +1,14 @@
 package it.polito.wa2.order.services
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
+import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.*
-import it.polito.wa2.order.outbox.OutboxEvent
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
-import it.polito.wa2.order.utils.ObjectIdTypeAdapter
+import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
@@ -18,39 +16,37 @@ import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.EnableTransactionManagement
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.transaction.reactive.TransactionalOperator
-import reactor.core.Disposable
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.*
 
 @Service
-@EnableTransactionManagement
+@Transactional
 class OrderServiceImpl(
     val orderRepository: OrderRepository,
     val eventPublisher: OutboxEventPublisher,
     val mailService: MailService,
-    val transactionalOperator: TransactionalOperator
 ) : OrderService {
 
     private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
 
-    @Transactional
-    fun saveOrder(order: OrderEntity) : Flux<OutboxEvent> {
-        val tx = Flux.just(order)
+    /**
+     * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
+     */
+    fun saveOrder(order: OrderEntity) : Mono<OrderDTO> {
+        return Mono.just(order)
             .flatMap(orderRepository::save)
-            .flatMap {
-                val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
+            .doOnNext {
                 eventPublisher.publish(
                     "order.topic",
                     it.id.toString(),
                     gson.toJson(it),
                     "ORDER_CREATED"
-                )
+                ).subscribe()
             }
-        return transactionalOperator.execute { tx }
+            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
+            .map { it.toOrderDTO() }
     }
 
     /**
@@ -59,7 +55,7 @@ class OrderServiceImpl(
      * @param username : username associated to that order
      * @return the order created
      */
-    override suspend fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
+    override fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
         if (userInfoJWT.username == orderDTO.buyer) {
             val order = OrderEntity(
                 buyer = userInfoJWT.username,
@@ -68,11 +64,9 @@ class OrderServiceImpl(
                     ProductEntity(it.id,it.quantity,it.price)
                 }?.toList()
             )
-            saveOrder(order).subscribe()
+            return saveOrder(order)
         }
-
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "PROVA You can't create order for another person")
-
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
     }
 
     override suspend fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {
@@ -87,7 +81,6 @@ class OrderServiceImpl(
                     throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT DELETED")
                 }.awaitSingle()
                 logger.info("ORDER Received: $orderUpdated")
-                val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
                 orderUpdated?.let {
                     eventPublisher.publish(
                         "order.topic",

@@ -86,7 +86,7 @@ class WalletServiceImpl(
      * @return the new transaction created
      */
     @Transactional // Since we update multiple documents we annotated with transactional
-    override suspend fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): Mono<TransactionDTO> {
+    override fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): Mono<TransactionDTO> {
         // Check if the senderWalletId and the receiverWalletId are the same
         logger.info("RICEVENTE: ${transactionDTO.receiverWalletId}")
         logger.info("RICEVENTE: ${transactionDTO.receiverWalletId.toString()}")

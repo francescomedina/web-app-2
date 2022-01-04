@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.util.gson.GsonUtils
 import it.polito.wa2.util.http.HttpErrorInfo
+import it.polito.wa2.wallet.domain.WalletEntity
 import it.polito.wa2.wallet.dto.TransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
@@ -22,12 +25,16 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.mongodb.core.aggregation.MergeOperation.UniqueMergeId.id
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import org.springframework.http.HttpStatus
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.messaging.Message
 import org.springframework.messaging.handler.annotation.Header
 import org.springframework.messaging.handler.annotation.Payload
 import org.springframework.messaging.support.GenericMessage
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigDecimal
 
 data class ProductEntity(
@@ -59,109 +66,54 @@ data class Response(
 
 
 @Component
-class WalletEventListener @Autowired constructor(
-    walletService: WalletServiceImpl,
-    eventPublisher: OutboxEventPublisher,
-    walletRepository: WalletRepository
+@Transactional
+class WalletEventListener(
+    val walletService: WalletServiceImpl,
+    val eventPublisher: OutboxEventPublisher,
+    val walletRepository: WalletRepository
 ) {
     private val logger = LoggerFactory.getLogger(WalletEventListener::class.java)
-    private val walletService: WalletServiceImpl
-    private val eventPublisher: OutboxEventPublisher
-    private val walletRepository: WalletRepository
+    private val bankId = ObjectId("61be08d04e6ebd990b0fa5db")
 
-    init {
-        this.walletService = walletService
-        this.eventPublisher = eventPublisher
-        this.walletRepository = walletRepository
+    /**
+     * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
+     */
+    fun pay(order: OrderEntity, payload: String, isRefund: Boolean = false) : Mono<TransactionDTO> {
+        return Mono.just(order)
+            .flatMap { walletRepository.findByCustomerUsername(it.buyer) }
+            .flatMap {
+                walletService.createTransaction(
+                    null,
+                    TransactionDTO(
+                        amount = it?.amount,
+                        senderWalletId = if(isRefund) bankId else it?.id,
+                        receiverWalletId = if(isRefund) it?.id else bankId,
+                        reason = if(isRefund) "Order Refund" else "Order Payment"
+                    ), true
+                )
+            }
+            .doOnNext {
+                eventPublisher.publish(
+                    "wallet.topic",
+                    order.id.toString(),
+                    payload,
+                    if(isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"
+                ).subscribe()
+            }
+            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
     }
 
     @KafkaListener(topics = ["\${topics.in}"])
-    fun listen(
-        @Payload payload: String
-    ) {
-        /// TODO TRANSACTIONAL
+    fun listen(@Payload payload: String) {
+
         val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
         logger.info("WALLET Received: ${response.response}")
+
         if(response.response == "QUANTITY_AVAILABLE"){
-            logger.info("Received Wallet: ${response.order.buyer}")
-            runBlocking {
-                val senderWallet = walletRepository.findByCustomerUsername(response.order.buyer)?.awaitFirst()
-                logger.info("Received Wallet 2: $senderWallet")
-                senderWallet?.let {
-                    logger.info("Received Wallet 3: ${senderWallet.toWalletDTO()}")
-                    logger.info("Received Wallet 4: ${senderWallet.id}")
-                    logger.info("Received Wallet 5: ${ObjectId(senderWallet.id.toString())}")
-                    logger.info("Received Wallet 6: ${ObjectId("61be08d04e6ebd990b0fa5db")}")
-                    logger.info("Received Wallet 7: ${ObjectId("61be08d04e6ebd990b0fa5db").toString()}")
-                    val newTransaction = TransactionDTO(
-                        amount = BigDecimal(12),
-                        senderWalletId = senderWallet.id,
-                        receiverWalletId = ObjectId("61be08d04e6ebd990b0fa5db"),
-                        reason = "Order Payment"
-                    )
-                    logger.info("CREATO QUETSO: ${newTransaction}")
-                    try {
-                        val transactionCreatedDTO = walletService.createTransaction(
-                            null,
-                            newTransaction
-                            ,true
-                        ).awaitSingleOrNull()
-                        logger.info("FINALE: ${transactionCreatedDTO}")
-                        logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
-                        transactionCreatedDTO?.let {
-                            eventPublisher.publish(
-                                "wallet.topic",
-                                transactionCreatedDTO.id.toString(),
-                                payload,
-                                "TRANSACTION_SUCCESS"
-                            )
-                        }
-                    }catch (e: ErrorResponse){
-                        eventPublisher.publish(
-                            "wallet.topic",
-                            response.order.id.toString(),
-                            gson.toJson(response.order),
-                            "CREDIT_UNAVAILABLE"
-                        )
-                    }
-                }
-            }
-        }else if(response.response == "QUANTITY_INCREMENTED"){
-            logger.info("WALLET Received 45: ${response}")
-            runBlocking {
-                val senderWallet = walletRepository.findByCustomerUsername(response.order.buyer)?.awaitFirst()
-                logger.info("Received Wallet 2: $senderWallet")
-                senderWallet?.let {
-                    logger.info("Received Wallet 3: ${senderWallet.toWalletDTO()}")
-                    logger.info("Received Wallet 4: ${senderWallet.id}")
-                    logger.info("Received Wallet 5: ${ObjectId(senderWallet.id.toString())}")
-                    logger.info("Received Wallet 6: ${ObjectId("61be08d04e6ebd990b0fa5db")}")
-                    logger.info("Received Wallet 7: ${ObjectId("61be08d04e6ebd990b0fa5db").toString()}")
-                    val newTransaction = TransactionDTO(
-                        amount = BigDecimal(12),
-                        senderWalletId = ObjectId("61be08d04e6ebd990b0fa5db"),
-                        receiverWalletId = senderWallet.id,
-                        reason = "Order Refund"
-                    )
-                    val transactionCreatedDTO = walletService.createTransaction(
-                        null,
-                        newTransaction
-                        ,true
-                    ).awaitSingleOrNull()
-                    logger.info("FINALE: ${transactionCreatedDTO}")
-                    logger.info("FINALE 2: ${transactionCreatedDTO?.id.toString()}")
-                    logger.info("FINALE 54: ${response.order}")
-                    transactionCreatedDTO?.let {
-                        eventPublisher.publish(
-                            "wallet.topic",
-                            response.order.id.toString(),
-                            gson.toJson(response.order),
-                            "REFUND_TRANSACTION_SUCCESS"
-                        )
-                    }
-                }
-            }
+            pay(response.order,payload)
+        }else if(response.response == "QUANTITY_INCREMENTED"){ //ORDER CANCELED OR QUANTITY NO MORE AVAILABLE
+            pay(response.order,payload,true)
         }
     }
 }

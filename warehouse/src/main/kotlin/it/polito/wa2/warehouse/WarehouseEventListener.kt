@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.warehouse.domain.ProductAvailabilityEntity
 import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
 import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
@@ -68,39 +69,25 @@ data class OrderEntity(
 
 
 @Component
-class WarehouseEventListener @Autowired constructor(
-    errorProducer: ErrorProducer,
-    warehouseRepository: WarehouseRepository,
-    warehouseServiceImpl: WarehouseServiceImpl,
-    productServiceImpl: ProductServiceImpl,
-    productAvailabilityRepository: ProductAvailabilityRepository,
-    transactionalOperator: TransactionalOperator,
-    eventPublisher: OutboxEventPublisher,
+@Transactional
+class WarehouseEventListener constructor(
+    val errorProducer: ErrorProducer,
+    val warehouseRepository: WarehouseRepository,
+    val warehouseServiceImpl: WarehouseServiceImpl,
+    val productServiceImpl: ProductServiceImpl,
+    val productAvailabilityRepository: ProductAvailabilityRepository,
+    val transactionalOperator: TransactionalOperator,
+    val eventPublisher: OutboxEventPublisher,
     @Value("\${topics.out}")
     private val topicTarget: String,
     @Value("\${topics.out-error}")
     private val errorTopicTarget: String,
-    kafkaTemplate: KafkaTemplate<String, String>
+    val kafkaTemplate: KafkaTemplate<String, String>
 ) {
     private val logger = LoggerFactory.getLogger(WarehouseEventListener::class.java)
-    private val errorProducer: ErrorProducer
-    private val kafkaTemplate: KafkaTemplate<String, String>
-    private val warehouseRepository: WarehouseRepository
-    private val warehouseServiceImpl: WarehouseServiceImpl
-    private val productServiceImpl: ProductServiceImpl
-    private val productAvailabilityRepository: ProductAvailabilityRepository
-    private val transactionalOperator: TransactionalOperator
-    private val eventPublisher: OutboxEventPublisher
 
-    init {
-        this.errorProducer = errorProducer
-        this.kafkaTemplate = kafkaTemplate
-        this.warehouseRepository = warehouseRepository
-        this.warehouseServiceImpl = warehouseServiceImpl
-        this.productServiceImpl = productServiceImpl
-        this.productAvailabilityRepository = productAvailabilityRepository
-        this.transactionalOperator = transactionalOperator
-        this.eventPublisher = eventPublisher
+    fun updateQuantity(){
+        
     }
 
     @KafkaListener(topics = ["\${topics.in}"])
@@ -109,7 +96,6 @@ class WarehouseEventListener @Autowired constructor(
         @Header("type") type: String?
     ) {
         if(type == "ORDER_CREATED"){
-            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
             logger.info("Received: $order")
@@ -125,7 +111,6 @@ class WarehouseEventListener @Autowired constructor(
             kafkaTemplate.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
         }
         else if(type == "ORDER_CANCELED"){
-            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
             logger.info("Received: $order")
@@ -136,7 +121,6 @@ class WarehouseEventListener @Autowired constructor(
     @Transactional
     suspend fun saveOrderProducts(order: OrderEntity) {
         logger.info("ENTRATOOO CON $order")
-        val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
 /*        return Flux.fromIterable(order.products)
             .doOnNext {
                 logger.info("ENTRATO NEL DO ON NEXT $it")
@@ -231,7 +215,6 @@ class WarehouseEventListener @Autowired constructor(
         logger.info("WAREHOUSE_2 Received: ${type}")
         logger.info("WAREHOUSE_2 Received: ${payload}")
         if(type == "TRANSACTION_SUCCESS"){
-            val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val res = gson.fromJson(genericMessage.payload.toString(),Result::class.java)
             saveOrderProducts(res.order)

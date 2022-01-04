@@ -1,4 +1,4 @@
-package it.polito.wa2.order.utils
+package it.polito.wa2.util.gson
 
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader

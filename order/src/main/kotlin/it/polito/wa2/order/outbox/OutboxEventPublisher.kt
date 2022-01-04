@@ -1,13 +1,10 @@
 package it.polito.wa2.order.outbox
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Mono
-import java.lang.RuntimeException
+import kotlin.RuntimeException
 
 @Component
 class OutboxEventPublisher @Autowired constructor(
@@ -30,7 +27,7 @@ class OutboxEventPublisher @Autowired constructor(
 		headers["type"] = type
 		val encodedHeaders = objectMapper.writeValueAsString(headers)
 		outboxEvent.headers = encodedHeaders
-		throw RuntimeException("CIAONEEEEE")
-//		return outboxEventRepository.save(outboxEvent)
+//		throw RuntimeException("CIAONEEEEE")
+		return outboxEventRepository.save(outboxEvent)
 	}
 }
