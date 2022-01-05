@@ -34,7 +34,7 @@ class OrderServiceImpl(
     /**
      * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
      */
-    fun saveOrder(order: OrderEntity) : Mono<OrderDTO> {
+    fun saveOrder(order: OrderEntity, toDelete: Boolean = false) : Mono<OrderDTO> {
         return Mono.just(order)
             .flatMap(orderRepository::save)
             .doOnNext {
@@ -42,7 +42,7 @@ class OrderServiceImpl(
                     "order.topic",
                     it.id.toString(),
                     gson.toJson(it),
-                    "ORDER_CREATED"
+                    if(toDelete) "ORDER_CANCELED" else "ORDER_CREATED"
                 ).subscribe()
             }
             .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
@@ -69,55 +69,47 @@ class OrderServiceImpl(
         throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
     }
 
-    override suspend fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {
-        val order = orderRepository.findById(orderId.toString()).onErrorMap {
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
-        }.awaitSingleOrNull()
-        if (userInfoJWT.username == order?.buyer) {
-            if(order.status == "ISSUED"){
-                logger.info("ORDER ENTRATO: $order")
-                order.status = "CANCELING"
-                val orderUpdated = orderRepository.save(order).onErrorMap {
-                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "ORDER NOT DELETED")
-                }.awaitSingle()
-                logger.info("ORDER Received: $orderUpdated")
-                orderUpdated?.let {
-                    eventPublisher.publish(
-                        "order.topic",
-                        order.id.toString(),
-                        gson.toJson(orderUpdated),
-                        "ORDER_CANCELED"
-                    )
+    override fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {
+        return orderRepository.findById(orderId.toString())
+            .doOnNext {
+                if (userInfoJWT.username != it?.buyer) {
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't cancel orders for another person")
                 }
-                return mono { null }
+                if(it.status != "ISSUED"){
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
+                }
+                ///TODO ha bisogno del subscribe() ?
+                saveOrder(it,true).subscribe()
             }
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
-        }
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't cancel orders for another person")
+            .onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+            }
+            .then()
     }
 
-    override suspend fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
-
-        if (trusted || userInfoJWT!!.isAdmin()) {
-            val orderEntity = orderRepository.findById(orderId).onErrorMap {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
-            }.awaitSingleOrNull()
-
-            orderEntity?.let {
-                orderEntity.status = orderDTO.status
-                ///TODO MEttere i prodotti anche
-                orderRepository.save(it).onErrorMap { error ->
-                    throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
-                }.awaitSingle()
+    override fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
+        if (!trusted || !userInfoJWT!!.isAdmin()) {
+            throw AppRuntimeException("User not authenticated",HttpStatus.BAD_REQUEST,null)
+        }
+        return orderRepository.findById(orderId)
+            .onErrorResume {
+                throw AppRuntimeException("Update order error",HttpStatus.INTERNAL_SERVER_ERROR,it)
+            }
+            .doOnNext {
+                if(it==null){
+                    throw AppRuntimeException("Order not found",HttpStatus.BAD_REQUEST,it)
+                }
+                it.status = orderDTO.status
+            }
+            .flatMap(orderRepository::save)
+            .doOnNext {
                 if(orderDTO.status == "ISSUED"){
                     mailService.sendMessage(it.buyer!!, "Order Issued", "Order was successfully issued")
                 }
-                return mono { it.toOrderDTO() }
             }
-
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
-        }
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User not authenticated")
+            .map {
+                it.toOrderDTO()
+            }
     }
 
     /**

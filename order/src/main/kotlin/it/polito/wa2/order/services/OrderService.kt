@@ -11,8 +11,8 @@ import java.util.*
 
 interface OrderService {
     fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO>
-    suspend fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void>
-    suspend fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean = false): Mono<OrderDTO>
+    fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void>
+    fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean = false): Mono<OrderDTO>
     suspend fun getOrderById(userInfoJWT: UserInfoJWT, orderId: ObjectId): OrderDTO
     suspend fun getOrders(userInfoJWT: UserInfoJWT): Flux<OrderDTO>
 }

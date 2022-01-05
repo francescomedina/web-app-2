@@ -103,7 +103,7 @@ class WalletServiceImpl(
         } else if (userInfoJWT!=null && !userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Transaction cannot be with a positive amount (amount must be negative)")
         }
-        
+
         return Mono.just(transactionDTO.senderWalletId.toString())
             .flatMap(walletRepository::findById)
             .doOnNext {

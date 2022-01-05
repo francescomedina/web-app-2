@@ -1,39 +1,19 @@
 package it.polito.wa2.wallet
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import it.polito.wa2.api.exceptions.AppRuntimeException
-import it.polito.wa2.api.exceptions.ErrorResponse
-import it.polito.wa2.util.gson.GsonUtils
-import it.polito.wa2.util.http.HttpErrorInfo
-import it.polito.wa2.wallet.domain.WalletEntity
+import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.wallet.dto.TransactionDTO
-import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.services.WalletServiceImpl
-import it.polito.wa2.wallet.utils.ObjectIdTypeAdapter
-import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.runBlocking
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.mongodb.core.aggregation.MergeOperation.UniqueMergeId.id
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
 import org.springframework.http.HttpStatus
 import org.springframework.kafka.annotation.KafkaListener
-import org.springframework.messaging.Message
-import org.springframework.messaging.handler.annotation.Header
 import org.springframework.messaging.handler.annotation.Payload
-import org.springframework.messaging.support.GenericMessage
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 
@@ -92,6 +72,14 @@ class WalletEventListener(
                     ), true
                 )
             }
+            .doOnError {
+                eventPublisher.publish(
+                    "order.topic",
+                    order.id.toString(),
+                    payload,
+                    "TRANSACTION_ERROR"
+                ).subscribe()
+            }
             .doOnNext {
                 eventPublisher.publish(
                     "wallet.topic",
@@ -106,7 +94,6 @@ class WalletEventListener(
     @KafkaListener(topics = ["\${topics.in}"])
     fun listen(@Payload payload: String) {
 
-        val gson: Gson = GsonBuilder().registerTypeAdapter(ObjectId::class.java, ObjectIdTypeAdapter()).create()
         val response = gson.fromJson(payload, Response::class.java)
         logger.info("WALLET Received: ${response.response}")
 
