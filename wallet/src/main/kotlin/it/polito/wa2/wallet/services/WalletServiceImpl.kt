@@ -3,6 +3,7 @@ package it.polito.wa2.wallet.services
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
+import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.wallet.WalletEventListener
 import it.polito.wa2.wallet.repositories.WalletRepository
@@ -23,12 +24,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.util.Assert
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Instant
 
 @Service
+@Transactional
 class WalletServiceImpl(
     val walletRepository: WalletRepository,
     val transactionRepository: TransactionRepository,
@@ -100,59 +103,52 @@ class WalletServiceImpl(
         } else if (userInfoJWT!=null && !userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Transaction cannot be with a positive amount (amount must be negative)")
         }
-
-        // Check if the senderWalletId and receiverWalletId are valid id
-        val senderWallet = walletRepository.findById(transactionDTO.senderWalletId.toString()).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Sender wallet not found")
-
-        logger.info("Transaction DTO: ${senderWallet}")
-        val receiverWallet = walletRepository.findById(transactionDTO.receiverWalletId.toString()).awaitSingleOrNull()
-        logger.info("Transaction DTO: ${receiverWallet}")
-        // Check if the owner of the senderWallet is the same of the JWT
-        if (!trusted && userInfoJWT!=null && senderWallet.customerUsername != userInfoJWT.username) {
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Only the wallet owner can create transaction")
-        }
-
-
-        // Check if the sender has enough money to carry out the transaction
-        if (senderWallet.amount < transactionDTO.amount.abs()) {
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Sender has not enough money to compute the transaction")
-        }
-
-        // Additional check that the required fields didn't change
-        if (senderWallet.id != null && receiverWallet?.id != null) {
-
-            // Amount can be positive or negative based on if the transaction is made by the Admin or by the Customer
-            // With Abs I can include both cases
-            senderWallet.amount -= transactionDTO.amount.abs()
-            receiverWallet.amount += transactionDTO.amount.abs()
-
-            walletRepository.save(senderWallet).onErrorMap {
-                throw ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error")
-            }.awaitSingle()
-
-            walletRepository.save(receiverWallet).onErrorMap {
-                throw ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error")
-            }.awaitSingle()
-
-            val newTransaction = TransactionEntity(
-                amount = transactionDTO.amount,
-                time = Instant.now(),
-                senderWalletId = senderWallet.id,
-                receiverWalletId = receiverWallet.id,
-                reason = transactionDTO.reason
-            )
-
-//            return transactionRepository.save(newTransaction).awaitSingle().toTransactionDTO()
-            val transactionCreated = transactionRepository.save(newTransaction).onErrorMap {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "TRANSACTION NOT PERSISTED")
-            }.awaitSingleOrNull()
-            transactionCreated?.let {
-                return mono { it.toTransactionDTO() }
+        
+        return Mono.just(transactionDTO.senderWalletId.toString())
+            .flatMap(walletRepository::findById)
+            .doOnNext {
+                if (it == null) {
+                    throw AppRuntimeException("Sender wallet not found",HttpStatus.BAD_REQUEST,null)
+                }
+                if (it.amount < transactionDTO.amount.abs()) {
+                    throw AppRuntimeException("Sender has not enough money to compute the transaction",HttpStatus.BAD_REQUEST,null)
+                }
+                if (!trusted && userInfoJWT!=null && it.customerUsername != userInfoJWT.username) {
+                    throw AppRuntimeException("Only the wallet owner can create transaction",HttpStatus.BAD_REQUEST,null)
+                }
+                it.amount -= transactionDTO.amount.abs()
             }
-        }
-
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "Generic Error")
+            .flatMap(walletRepository::save)
+            .doOnNext {
+                if (it == null) {
+                    throw AppRuntimeException("Sender wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null)
+                }
+            }
+            .flatMap { senderWallet ->
+                walletRepository.findById(transactionDTO.receiverWalletId.toString())
+                    .doOnNext { receiverWallet ->
+                        if (receiverWallet == null) {
+                            throw AppRuntimeException("Receiver wallet not found",HttpStatus.BAD_REQUEST,null)
+                        }
+                        receiverWallet.amount += transactionDTO.amount.abs()
+                        walletRepository.save(receiverWallet)
+                            .onErrorResume { throw AppRuntimeException("Receiver wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+                    }
+                    .flatMap {
+                        transactionRepository.save(TransactionEntity(
+                            amount = transactionDTO.amount,
+                            time = Instant.now(),
+                            senderWalletId = senderWallet.id!!,
+                            receiverWalletId = it.id!!,
+                            reason = transactionDTO.reason
+                        ))
+                    }
+                    .onErrorResume { throw AppRuntimeException("Transaction not persisted",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+            }
+            .onErrorResume { throw AppRuntimeException("Transaction error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+            .map {
+                it.toTransactionDTO()
+            }
     }
 
     /**

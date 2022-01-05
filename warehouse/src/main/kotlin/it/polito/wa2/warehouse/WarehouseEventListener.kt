@@ -88,16 +88,19 @@ class WarehouseEventListener constructor(
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
             val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
             logger.info("Received: $order")
-            order.products.map {
-                runBlocking {
-                    val warehouses = productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)?.awaitSingleOrNull()
-                    logger.info("WAREHOUSE ESISTEEEEEEEEEEEEEEEEE: $warehouses")
-                    if(warehouses == null){
-                        kafkaTemplate.send(ProducerRecord("order.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_UNAVAILABLE"))))
-                    }
+            Flux.fromIterable(order.products)
+                .doOnNext {
+                    productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
+                        .doOnNext { p -> Assert.isTrue(p!=null,"Product no more available") }
+                        .subscribe()
                 }
-            }
-            kafkaTemplate.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
+                .doOnError {
+                    kafkaTemplate.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_AVAILABLE"))))
+                }
+                .doOnNext {
+                    kafkaTemplate.send(ProducerRecord("order.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_UNAVAILABLE"))))
+                }
+                .subscribe()
         }
         else if(type == "ORDER_CANCELED"){
             val genericMessage = gson.fromJson(payload, GenericMessage::class.java)
@@ -112,14 +115,14 @@ class WarehouseEventListener constructor(
      */
     fun updateQuantity(order: OrderEntity): Flux<ProductAvailabilityEntity> {
         return Flux.fromIterable(order.products)
-            .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
-            .doOnNext {
-                Assert.isTrue(it!=null, "Product is no more available")
-            }
             .flatMap {
-                it!!.quantity -= it!!.quantity
-                productAvailabilityRepository.save(it)
+                productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
+                    .doOnNext { p ->
+                        Assert.isTrue(p!=null, "Product is no more available")
+                        p!!.quantity -= it.quantity
+                    }
             }
+            .flatMap { productAvailabilityRepository.save(it!!) }
             .doOnNext {
                 eventPublisher.publish(
                     "warehouse.topic",
