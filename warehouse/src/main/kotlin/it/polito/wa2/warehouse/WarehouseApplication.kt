@@ -12,18 +12,17 @@ import org.springframework.transaction.reactive.TransactionalOperator
 
 @SpringBootApplication
 @ComponentScan("it.polito.wa2")
-@EnableTransactionManagement
 class WarehouseApplication {
 
-    @Bean
-    fun transactionalOperator(tmx: ReactiveMongoTransactionManager) : TransactionalOperator {
-        return TransactionalOperator.create(tmx)
-    }
-
-    @Bean
-    fun transactionManager(dbf: ReactiveMongoDatabaseFactory) : ReactiveMongoTransactionManager {
-        return ReactiveMongoTransactionManager(dbf)
-    }
+//    @Bean
+//    fun transactionalOperator(tmx: ReactiveMongoTransactionManager) : TransactionalOperator {
+//        return TransactionalOperator.create(tmx)
+//    }
+//
+//    @Bean
+//    fun transactionManager(dbf: ReactiveMongoDatabaseFactory) : ReactiveMongoTransactionManager {
+//        return ReactiveMongoTransactionManager(dbf)
+//    }
 }
 
 fun main(args: Array<String>) {
