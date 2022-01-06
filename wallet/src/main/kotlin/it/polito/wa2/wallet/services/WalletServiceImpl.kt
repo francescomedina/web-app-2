@@ -1,11 +1,8 @@
 package it.polito.wa2.wallet.services
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
-import it.polito.wa2.wallet.WalletEventListener
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.domain.WalletEntity
@@ -15,16 +12,12 @@ import it.polito.wa2.wallet.dto.toTransactionDTO
 import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.TransactionRepository
-import it.polito.wa2.wallet.utils.ObjectIdTypeAdapter
-import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.util.Assert
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal

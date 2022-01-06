@@ -44,6 +44,8 @@ topics:
   in-error: warehouse-error.topic
   out-error: wallet-error.topic
 
+CONSUMER_TOPIC: warehouse.topic
+
 logging:
   level:
     root: INFO

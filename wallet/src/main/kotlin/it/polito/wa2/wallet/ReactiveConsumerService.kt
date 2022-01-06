@@ -20,13 +20,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 
-data class Result(
-    @JsonProperty("order")
-    val order: OrderEntity,
-    @JsonProperty("response")
-    val response: String
-)
-
 data class ProductEntity(
     @JsonProperty("id")
     var id: ObjectId,
@@ -64,22 +57,25 @@ class ReactiveConsumerService(
             .receiveAutoAck()
             .doOnNext { consumerRecord: ConsumerRecord<String, String> ->
                 log.info(
-                    "received key={}, value={} from topic={}, offset={}",
+                    "received key={}, value={} from topic={}, offset={}, headers={}",
                     consumerRecord.key(),
                     consumerRecord.value(),
                     consumerRecord.topic(),
-                    consumerRecord.offset()
+                    consumerRecord.offset(),
+                    consumerRecord.headers()
                 )
             }
             .doOnNext {
-                val response = gson.fromJson(it.value(), Result::class.java)
-                if(it.headers().any { h -> h.key().toString() == "type" && h.value().toString() == "QUANTITY_AVAILABLE" }){
-                    pay(response.order,it.value()).subscribe()
+                val order = gson.fromJson(it.value(), OrderEntity::class.java)
+//                val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+                val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
+                if(type == "QUANTITY_AVAILABLE"){
+                    pay(order).subscribe()
                 }
-                else if(it.headers().any { h -> h.key().toString() == "type" && h.value().toString() == "QUANTITY_UNAVAILABLE" }){
-                    pay(response.order,it.value()).subscribe()
+                else if(type == "QUANTITY_UNAVAILABLE"){
+                    pay(order,true).subscribe()
                 }
-                log.info("successfully consumed {}={}", GenericMessage::class.java.simpleName, response)
+                log.info("successfully consumed {}={}", GenericMessage::class.java.simpleName, order)
             }
             .doOnError { throwable: Throwable ->
                 log.error("something bad happened while consuming : {}", throwable.message)
@@ -87,14 +83,17 @@ class ReactiveConsumerService(
     }
 
     @Transactional
-    fun pay(order: OrderEntity, payload: String, isRefund: Boolean = false) : Mono<TransactionDTO> {
+    fun pay(order: OrderEntity, isRefund: Boolean = false) : Mono<TransactionDTO> {
         return Mono.just(order)
             .flatMap { walletRepository.findByCustomerUsername(it.buyer!!) }
             .flatMap {
+                val tot = order.products
+                    .map { p -> p.price.multiply(BigDecimal.valueOf(p.quantity.toDouble())) }
+                    .reduce { tot, item -> tot + item }
                 walletService.createTransaction(
                     null,
                     TransactionDTO(
-                        amount = it?.amount,
+                        amount = tot,
                         senderWalletId = if(isRefund) bankId else it?.id,
                         receiverWalletId = if(isRefund) it?.id else bankId,
                         reason = if(isRefund) "Order Refund" else "Order Payment"
@@ -105,7 +104,7 @@ class ReactiveConsumerService(
                 eventPublisher.publish(
                     "order.topic",
                     order.id.toString(),
-                    payload,
+                    gson.toJson(order),
                     "TRANSACTION_ERROR"
                 ).subscribe()
             }
@@ -113,7 +112,7 @@ class ReactiveConsumerService(
                 eventPublisher.publish(
                     "wallet.topic",
                     order.id.toString(),
-                    payload,
+                    gson.toJson(order),
                     if(isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"
                 ).subscribe()
             }

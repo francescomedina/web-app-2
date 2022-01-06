@@ -13,11 +13,8 @@ class ReactiveProducerService(
 ) {
     private val log = LoggerFactory.getLogger(ReactiveProducerService::class.java)
 
-    @Value(value = "\${PRODUCER_TOPIC}")
-    private val topic: String? = null
-
     fun send(payload: ProducerRecord<String,String>) {
-        log.info("send to topic={}, {}={},", topic, String::class.java.simpleName, payload)
+        log.info("send to {}={},", String::class.java.simpleName, payload)
         reactiveKafkaProducerTemplate.send(payload)
             .doOnSuccess { senderResult -> log.info("sent {} offset : {}", payload, senderResult.recordMetadata().offset()) }
         .subscribe()

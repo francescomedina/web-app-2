@@ -7,6 +7,7 @@ import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
 import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.header.internals.RecordHeader
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
@@ -18,11 +19,7 @@ import org.springframework.util.Assert
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
-
-data class Result(
-    val order: OrderEntity,
-    val response: String
-)
+import java.util.*
 
 data class ProductEntity(
     @JsonProperty("id")
@@ -67,7 +64,7 @@ class ReactiveConsumerService(
                     }
                     .doOnError {
                         reactiveProducerService.send(
-                            ProducerRecord("asd.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_UNAVAILABLE")))
+                            ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
                         )
                         throw RuntimeException(it)
                     }
@@ -76,8 +73,10 @@ class ReactiveConsumerService(
                 reactiveProducerService.send(
                     ProducerRecord(
                         "warehouse.topic",
+                        null,
                         order.id.toString(),
-                        gson.toJson(Result(order,"QUANTITY_AVAILABLE"))
+                        gson.toJson(order),
+                        listOf(RecordHeader("type", "QUANTITY_AVAILABLE".toByteArray()))
                     )
                 )
             }
@@ -85,30 +84,29 @@ class ReactiveConsumerService(
 
     private fun warehouseConsumer(): Flux<ConsumerRecord<String, String>> {
         return reactiveKafkaConsumerTemplate
-            .receiveAutoAck() // .delayElements(Duration.ofSeconds(2L)) // BACKPRESSURE
+            .receiveAutoAck()
             .doOnNext { consumerRecord: ConsumerRecord<String, String> ->
                 log.info(
-                    "received key={}, value={} from topic={}, offset={}",
+                    "received key={}, value={} from topic={}, offset={}, headers={}",
                     consumerRecord.key(),
                     consumerRecord.value(),
                     consumerRecord.topic(),
-                    consumerRecord.offset()
+                    consumerRecord.offset(),
+                    consumerRecord.headers()
                 )
             }
             .doOnNext {
+                val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
                 val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                if(it.headers().any { h -> h.key().toString() == "type" && h.value().toString() == "ORDER_CREATED" }){
-                    val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-                    checkProductAvailability(order).subscribe()
+                val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+                when (type){
+                    "ORDER_CREATED" -> checkProductAvailability(order).subscribe()
+                    "ORDER_CANCELED" -> reactiveProducerService.send(
+                        ProducerRecord("warehouse.topic", null, order.id.toString(), gson.toJson(order), listOf(RecordHeader("type", "QUANTITY_INCREMENTED".toByteArray())))
+                    )
+                    "TRANSACTION_SUCCESS" -> updateQuantity(order).subscribe()
                 }
-                else if(it.headers().any { h -> h.key().toString() == "type" && h.value().toString() == "ORDER_CANCELED" }){
-                    val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-                    reactiveProducerService.send(ProducerRecord("warehouse.topic", order.id.toString(), gson.toJson(Result(order,"QUANTITY_INCREMENTED"))))
-                }else if(it.headers().any { h -> h.key().toString() == "type" && h.value().toString() == "TRANSACTION_SUCCESS" }){
-                    val res = gson.fromJson(genericMessage.payload.toString(), Result::class.java)
-                    updateQuantity(res.order)
-                }
-                log.info("successfully consumed {}={}", GenericMessage::class.java.simpleName, genericMessage)
+                log.info("successfully consumed {} {}={}", type, GenericMessage::class.java.simpleName, genericMessage)
             }
             .doOnError { throwable: Throwable ->
                 log.error("something bad happened while consuming : {}", throwable.message)

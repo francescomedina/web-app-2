@@ -78,7 +78,6 @@ class OrderServiceImpl(
                 if(it.status != "ISSUED"){
                     throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
                 }
-                ///TODO ha bisogno del subscribe() ?
                 saveOrder(it,true).subscribe()
             }
             .onErrorMap {
@@ -87,29 +86,26 @@ class OrderServiceImpl(
             .then()
     }
 
-    override fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
-        if (!trusted || !userInfoJWT!!.isAdmin()) {
-            throw AppRuntimeException("User not authenticated",HttpStatus.BAD_REQUEST,null)
-        }
-        return orderRepository.findById(orderId)
-            .onErrorResume {
-                throw AppRuntimeException("Update order error",HttpStatus.INTERNAL_SERVER_ERROR,it)
-            }
-            .doOnNext {
-                if(it==null){
-                    throw AppRuntimeException("Order not found",HttpStatus.BAD_REQUEST,it)
-                }
-                it.status = orderDTO.status
-            }
-            .flatMap(orderRepository::save)
-            .doOnNext {
-                if(orderDTO.status == "ISSUED"){
+    override suspend fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
+        if (trusted || userInfoJWT!!.isAdmin()) {
+            val orderEntity = orderRepository.findById(orderId).onErrorMap {
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
+            }.awaitSingleOrNull()
+
+            orderEntity?.let {
+                orderEntity.status = orderDTO.status
+                orderRepository.save(it).onErrorMap { error ->
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
+                }.awaitSingle()
+                if(orderDTO.status === "ISSUED"){
                     mailService.sendMessage(it.buyer!!, "Order Issued", "Order was successfully issued")
                 }
+                return mono { it.toOrderDTO() }
             }
-            .map {
-                it.toOrderDTO()
-            }
+
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+        }
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User not authenticated")
     }
 
     /**

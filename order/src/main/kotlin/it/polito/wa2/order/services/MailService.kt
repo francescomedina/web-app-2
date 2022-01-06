@@ -12,7 +12,6 @@ interface MailService {
 }
 
 @Service
-@Transactional
 class MailServiceImpl(
     val emailSender: JavaMailSender
 ): MailService {

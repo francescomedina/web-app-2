@@ -52,6 +52,7 @@ topics:
   in: wallet.topic
   out: order.topic
 
+CONSUMER_TOPIC: warehouse.topic,wallet.topic
 
 logging:
   level:
