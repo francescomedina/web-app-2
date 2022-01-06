@@ -1,4 +1,4 @@
-package it.polito.wa2.warehouse
+package it.polito.wa2.wallet
 
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.slf4j.LoggerFactory

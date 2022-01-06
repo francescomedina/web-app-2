@@ -1,4 +1,4 @@
-package it.polito.wa2.warehouse.config
+package it.polito.wa2.order.config
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties

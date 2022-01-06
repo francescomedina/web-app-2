@@ -1,4 +1,4 @@
-package it.polito.wa2.warehouse.config
+package it.polito.wa2.wallet.config
 
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.context.annotation.Bean
