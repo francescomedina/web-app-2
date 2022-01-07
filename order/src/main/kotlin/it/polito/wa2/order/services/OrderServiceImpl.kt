@@ -30,6 +30,7 @@ class OrderServiceImpl(
 ) : OrderService {
 
     private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
+    private val adminEmail = "admin@test.com"
 
     /**
      * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
@@ -93,12 +94,15 @@ class OrderServiceImpl(
             }.awaitSingleOrNull()
 
             orderEntity?.let {
+                val prevStatus = orderEntity.status
                 orderEntity.status = orderDTO.status
                 orderRepository.save(it).onErrorMap { error ->
                     throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
                 }.awaitSingle()
-                if(orderDTO.status === "ISSUED"){
-                    mailService.sendMessage(it.buyer!!, "Order Issued", "Order was successfully issued")
+                if(prevStatus != orderDTO.status){
+                    listOf(it.buyer, adminEmail).forEach { to ->
+                        mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
+                    }
                 }
                 return mono { it.toOrderDTO() }
             }
