@@ -73,7 +73,7 @@ class ReactiveConsumerService(
                         .flatMap(orderRepository::save)
                         .doOnNext {
                             o -> if(status == "ISSUED"){
-                                mailService.sendMessage(o.buyer!!, "Order Issued", "Order was successfully issued")
+                                mailService.sendMessage(o.buyer!!, "Order ${o.id.toString()} ISSUED", "Order ${o.id.toString()} was successfully ISSUED. User ${o.buyer.toString()}")
                             }
                         }
                         .map { o -> o.toOrderDTO() }
