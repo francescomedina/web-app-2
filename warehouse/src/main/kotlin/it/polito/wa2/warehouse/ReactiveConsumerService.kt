@@ -114,6 +114,7 @@ class ReactiveConsumerService(
                     "ORDER_CREATED" -> checkProductAvailability(order).subscribe()
                     "ORDER_CANCELED" -> incrementQuantity(order).subscribe()
                     "TRANSACTION_SUCCESS" -> decrementQuantity(order).subscribe()
+                    "REFUND_TRANSACTION_ERROR" -> incrementQuantity(order, true).subscribe()
                 }
             }
             .doOnError { throwable: Throwable ->
@@ -171,7 +172,7 @@ class ReactiveConsumerService(
     }
 
     @Transactional
-    fun incrementQuantity(order: OrderEntity): Flux<DeliveryEntity> {
+    fun incrementQuantity(order: OrderEntity, dueToError: Boolean = false): Flux<DeliveryEntity> {
         return Flux.fromIterable(order.delivery!!)
             .doOnNext {
                 Flux.fromIterable(it.products)
@@ -186,13 +187,15 @@ class ReactiveConsumerService(
             }
             .doOnError { throw RuntimeException("Error on productAvailability") }
             .doOnComplete {
-                eventPublisher.publish(
-                    "warehouse.topic",
-                    order.id.toString(),
-                    gson.toJson(order),
-                    "WAREHOUSE_PRODUCTS_RETURNED"
-                ).subscribe{
-                    log.info("successfully consumed INCREMENT QUANTITY {} ", it)
+                if(!dueToError){
+                    eventPublisher.publish(
+                        "warehouse.topic",
+                        order.id.toString(),
+                        gson.toJson(order),
+                        "WAREHOUSE_PRODUCTS_RETURNED"
+                    ).subscribe{
+                        log.info("successfully consumed INCREMENT QUANTITY {} ", it)
+                    }
                 }
             }
             .doOnError {

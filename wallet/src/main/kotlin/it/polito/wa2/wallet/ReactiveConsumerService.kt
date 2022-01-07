@@ -123,6 +123,14 @@ class ReactiveConsumerService(
                     gson.toJson(order),
                     if(isRefund) "REFUND_TRANSACTION_ERROR" else "TRANSACTION_ERROR"
                 ).subscribe()
+                if(isRefund){
+                    eventPublisher.publish(
+                        "wallet.topic",
+                        order.id.toString(),
+                        gson.toJson(order),
+                        "REFUND_TRANSACTION_ERROR"
+                    ).subscribe()
+                }
             }
             .doOnNext {
                 eventPublisher.publish(

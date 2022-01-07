@@ -53,6 +53,7 @@ class ReactiveConsumerService(
                         "REFUND_TRANSACTION_SUCCESS" -> "CANCELED"
                         "CREDIT_UNAVAILABLE" -> "FAILED-CREDIT_UNAVAILABLE"
                         "TRANSACTION_ERROR" -> "FAILED-TRANSACTION_ERROR"
+                        "REFUND_TRANSACTION_ERROR" -> "FAILED-REFUND_TRANSACTION_ERROR"
                         else -> ""
                     }
                     log.info("TYPE $type")
