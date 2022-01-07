@@ -5,14 +5,14 @@ import org.bson.types.ObjectId
 
 data class DeliveryDTO(
     var shippingAddress: String?,
-    var productId: ObjectId?,
-    var warehouseId: ObjectId?
+    var warehouseId: ObjectId,
+    var products: List<ProductDTO>
 )
 
 fun DeliveryEntity.toOrderDTO(): DeliveryDTO {
     return DeliveryDTO(
         shippingAddress = shippingAddress,
-        productId = productId,
-        warehouseId = warehouseId
+        warehouseId = warehouseId,
+        products = products.map { it.toOrderDTO() }.toList()
     )
 }

@@ -126,6 +126,7 @@ class WalletServiceImpl(
                         receiverWallet.amount += transactionDTO.amount.abs()
                         walletRepository.save(receiverWallet)
                             .onErrorResume { throw AppRuntimeException("Receiver wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+                            .subscribe()
                     }
                     .flatMap {
                         transactionRepository.save(TransactionEntity(

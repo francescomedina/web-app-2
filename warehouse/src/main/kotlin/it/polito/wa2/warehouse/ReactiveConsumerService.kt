@@ -1,7 +1,6 @@
 package it.polito.wa2.warehouse
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.warehouse.domain.ProductAvailabilityEntity
 import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
@@ -34,10 +33,10 @@ data class ProductEntity(
 data class DeliveryEntity(
     @JsonProperty("shippingAddress")
     var shippingAddress: String?,
-    @JsonProperty("productId")
-    var productId: ObjectId?,
     @JsonProperty("warehouseId")
-    var warehouseId: ObjectId?,
+    var warehouseId: ObjectId,
+    @JsonProperty("products")
+    var products: List<ProductEntity> = emptyList(),
 )
 
 data class OrderEntity(
@@ -113,10 +112,9 @@ class ReactiveConsumerService(
                 val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
                 when (type){
                     "ORDER_CREATED" -> checkProductAvailability(order).subscribe()
-                    "ORDER_CANCELED" -> updateQuantity(order,true).subscribe()
-                    "TRANSACTION_SUCCESS" -> updateQuantity(order).subscribe()
+                    "ORDER_CANCELED" -> incrementQuantity(order).subscribe()
+                    "TRANSACTION_SUCCESS" -> decrementQuantity(order).subscribe()
                 }
-                log.info("successfully consumed {} {}={}", type, GenericMessage::class.java.simpleName, genericMessage)
             }
             .doOnError { throwable: Throwable ->
                 log.error("something bad happened while consuming : {}", throwable.message)
@@ -124,33 +122,41 @@ class ReactiveConsumerService(
     }
 
     @Transactional
-    fun updateQuantity(order: OrderEntity, increment: Boolean = false): Flux<ProductAvailabilityEntity> {
-        val listP = mutableListOf<DeliveryEntity>()
+    fun decrementQuantity(order: OrderEntity): Flux<ProductAvailabilityEntity> {
+        val deliveryMap = hashMapOf<ObjectId, MutableList<ProductEntity>>()
         return Flux.fromIterable(order.products)
                 .flatMap {
                     productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
                         .doOnNext { p ->
                             Assert.isTrue(p!=null, "Product is no more available")
                             p!!.quantity -= it.quantity
-                            listP.add(DeliveryEntity(
-                                "Via Alessandro Volta 123",
-                                p?.productId,
-                                p?.warehouseId
-                            ))
+                            if(deliveryMap[p!!.warehouseId].isNullOrEmpty()){
+                                deliveryMap[p.warehouseId] = mutableListOf(it)
+                            }else{
+                                deliveryMap[p.warehouseId]?.add(it)
+                            }
                         }
                 }
                 .flatMap { productAvailabilityRepository.save(it!!) }
                 .doOnError { throw RuntimeException("Error on productAvailability") }
                 .doOnComplete { // Si applica alla fine di tutti i flussi, in questo caso dopo aver iterato tutti i prodotti
-                    log.info("QUANTEEEE VOLTEEEEE ??????????")
-                    order.delivery = listP.toList()
-                    log.info("ORDERRRR DELIVERYYY $listP")
+                    val tmp = mutableListOf<DeliveryEntity>()
+                    deliveryMap.forEach {
+                        tmp.add(DeliveryEntity(
+                            "Via Alessandro Volta 123",
+                            it.key,
+                            it.value.toList()
+                        ))
+                    }
+                    order.delivery = tmp.toList()
                     eventPublisher.publish(
                         "warehouse.topic",
                         order.id.toString(),
                         gson.toJson(order),
                         "QUANTITY_DECREMENTED"
-                    ).subscribe()
+                    ).subscribe{
+                        log.info("successfully consumed DECREMENT QUANTITY {} ", it)
+                    }
                 }
                 .doOnError {
                     eventPublisher.publish(
@@ -162,7 +168,41 @@ class ReactiveConsumerService(
                         throw RuntimeException("Error during updating products")
                     }
                 }
+    }
 
+    @Transactional
+    fun incrementQuantity(order: OrderEntity): Flux<DeliveryEntity> {
+        return Flux.fromIterable(order.delivery!!)
+            .doOnNext {
+                Flux.fromIterable(it.products)
+                    .doOnNext { p ->
+                        productAvailabilityRepository.findOneByWarehouseIdAndProductId(it!!.warehouseId,p.id)
+                            .doOnNext { pa ->
+                                pa!!.quantity += p.quantity
+                                productAvailabilityRepository.save(pa!!).subscribe()
+                            }.subscribe()
+                    }
+                    .subscribe()
+            }
+            .doOnError { throw RuntimeException("Error on productAvailability") }
+            .doOnComplete {
+                eventPublisher.publish(
+                    "warehouse.topic",
+                    order.id.toString(),
+                    gson.toJson(order),
+                    "WAREHOUSE_PRODUCTS_RETURNED"
+                ).subscribe{
+                    log.info("successfully consumed INCREMENT QUANTITY {} ", it)
+                }
+            }
+            .doOnError {
+                eventPublisher.publish(
+                    "warehouse.topic",
+                    order.id.toString(),
+                    gson.toJson(order),
+                    "WAREHOUSE_PRODUCTS_RETURNING_ERROR"
+                ).subscribe()
+            }
     }
 
     override fun run(vararg args: String) {

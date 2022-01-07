@@ -9,6 +9,7 @@ import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.services.WalletServiceImpl
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.bson.types.ObjectId
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.http.HttpStatus
@@ -32,10 +33,10 @@ data class ProductEntity(
 data class DeliveryEntity(
     @JsonProperty("shippingAddress")
     var shippingAddress: String?,
-    @JsonProperty("productId")
-    var productId: ObjectId?,
     @JsonProperty("warehouseId")
-    var warehouseId: ObjectId?,
+    var warehouseId: ObjectId,
+    @JsonProperty("products")
+    var products: List<ProductEntity> = emptyList(),
 )
 
 data class OrderEntity(
@@ -51,7 +52,6 @@ data class OrderEntity(
     var delivery: List<DeliveryEntity>? = emptyList(),
 )
 
-
 @Service
 class ReactiveConsumerService(
     val reactiveKafkaConsumerTemplate: ReactiveKafkaConsumerTemplate<String, String>,
@@ -60,7 +60,7 @@ class ReactiveConsumerService(
     val walletRepository: WalletRepository
 ) : CommandLineRunner {
 
-    var log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
+    private val log: Logger = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
     private val bankId = ObjectId("61be08d04e6ebd990b0fa5db")
 
     private fun walletConsumer(): Flux<ConsumerRecord<String, String>> {
@@ -77,16 +77,21 @@ class ReactiveConsumerService(
                 )
             }
             .doOnNext {
-                val order = gson.fromJson(it.value(), OrderEntity::class.java)
-//                val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-                val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
-                if(type == "QUANTITY_AVAILABLE"){
-                    pay(order).subscribe()
+                when(String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)) {
+                    "QUANTITY_AVAILABLE" -> {
+                        val order = gson.fromJson(it.value(), OrderEntity::class.java)
+                        pay(order).subscribe()
+                    }
+                    "QUANTITY_UNAVAILABLE" -> {
+                        val order = gson.fromJson(it.value(), OrderEntity::class.java)
+                        pay(order,true).subscribe()
+                    }
+                    "WAREHOUSE_PRODUCTS_RETURNED" -> {
+                        val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                        val order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                        pay(order,true).subscribe()
+                    }
                 }
-                else if(type == "QUANTITY_UNAVAILABLE"){
-                    pay(order,true).subscribe()
-                }
-                log.info("successfully consumed {}={}", GenericMessage::class.java.simpleName, order)
             }
             .doOnError { throwable: Throwable ->
                 log.error("something bad happened while consuming : {}", throwable.message)
@@ -116,7 +121,7 @@ class ReactiveConsumerService(
                     "order.topic",
                     order.id.toString(),
                     gson.toJson(order),
-                    "TRANSACTION_ERROR"
+                    if(isRefund) "REFUND_TRANSACTION_ERROR" else "TRANSACTION_ERROR"
                 ).subscribe()
             }
             .doOnNext {
@@ -125,7 +130,9 @@ class ReactiveConsumerService(
                     order.id.toString(),
                     gson.toJson(order),
                     if(isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"
-                ).subscribe()
+                ).subscribe{
+                    log.info("successfully consumed ${if(isRefund) "REFUND" else "PAYMENT"} {} ", it)
+                }
             }
             .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
     }

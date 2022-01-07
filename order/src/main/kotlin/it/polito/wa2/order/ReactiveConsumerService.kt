@@ -1,18 +1,12 @@
 package it.polito.wa2.order
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.order.domain.OrderEntity
-import it.polito.wa2.order.domain.ProductEntity
-import it.polito.wa2.order.dto.OrderDTO
 import it.polito.wa2.order.dto.toOrderDTO
 import it.polito.wa2.order.repositories.OrderRepository
 import it.polito.wa2.order.services.MailService
-import it.polito.wa2.order.services.OrderServiceImpl
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
-import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.http.HttpStatus
@@ -21,44 +15,6 @@ import org.springframework.messaging.support.GenericMessage
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
-import java.math.BigDecimal
-
-//data class ProductEntity(
-//    @JsonProperty("id")
-//    var id: ObjectId,
-//    @JsonProperty("quantity")
-//    var quantity: Int,
-//    @JsonProperty("price")
-//    var price: BigDecimal
-//)
-//
-//data class WarehouseProductEntity(
-//    @JsonProperty("productId")
-//    var productId: ObjectId?,
-//    @JsonProperty("warehouseId")
-//    var warehouseId: ObjectId?,
-//)
-//
-//data class DeliveryEntity(
-//    @JsonProperty("shippingAddress")
-//    var shippingAddress: String?,
-//    @JsonProperty("warehouseProducts")
-//    var warehouseProducts: List<WarehouseProductEntity>? = emptyList()
-//)
-//
-//data class OrderEntity(
-//    @JsonProperty("id")
-//    var id: ObjectId,
-//    @JsonProperty("status")
-//    var status: String? = null,
-//    @JsonProperty("buyer")
-//    var buyer: String? = null,
-//    @JsonProperty("products")
-//    var products: List<ProductEntity> = emptyList(),
-//    @JsonProperty("delivery")
-//    var delivery: List<DeliveryEntity>? = emptyList(),
-//)
-
 
 @Service
 class ReactiveConsumerService(
