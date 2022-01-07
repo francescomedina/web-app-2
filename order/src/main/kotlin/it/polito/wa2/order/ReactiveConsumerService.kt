@@ -2,6 +2,7 @@ package it.polito.wa2.order
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import it.polito.wa2.api.exceptions.AppRuntimeException
+import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.OrderDTO
 import it.polito.wa2.order.dto.toOrderDTO
@@ -20,17 +21,43 @@ import org.springframework.messaging.support.GenericMessage
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
+import java.math.BigDecimal
 
-data class OrderEntity(
-    @JsonProperty("id")
-    var id: ObjectId,
-    @JsonProperty("status")
-    var status: String? = null,
-    @JsonProperty("buyer")
-    var buyer: String? = null,
-    @JsonProperty("products")
-    var products: List<ProductEntity> = emptyList(),
-)
+//data class ProductEntity(
+//    @JsonProperty("id")
+//    var id: ObjectId,
+//    @JsonProperty("quantity")
+//    var quantity: Int,
+//    @JsonProperty("price")
+//    var price: BigDecimal
+//)
+//
+//data class WarehouseProductEntity(
+//    @JsonProperty("productId")
+//    var productId: ObjectId?,
+//    @JsonProperty("warehouseId")
+//    var warehouseId: ObjectId?,
+//)
+//
+//data class DeliveryEntity(
+//    @JsonProperty("shippingAddress")
+//    var shippingAddress: String?,
+//    @JsonProperty("warehouseProducts")
+//    var warehouseProducts: List<WarehouseProductEntity>? = emptyList()
+//)
+//
+//data class OrderEntity(
+//    @JsonProperty("id")
+//    var id: ObjectId,
+//    @JsonProperty("status")
+//    var status: String? = null,
+//    @JsonProperty("buyer")
+//    var buyer: String? = null,
+//    @JsonProperty("products")
+//    var products: List<ProductEntity> = emptyList(),
+//    @JsonProperty("delivery")
+//    var delivery: List<DeliveryEntity>? = emptyList(),
+//)
 
 
 @Service
@@ -62,7 +89,7 @@ class ReactiveConsumerService(
                 log.info("TYPE $type")
                 if(types.contains(type)){
                     val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                    val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+                    val order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
                     log.info("ORDER $order")
                     val status = when (type) {
                         "QUANTITY_DECREMENTED" -> "ISSUED"
@@ -82,6 +109,9 @@ class ReactiveConsumerService(
                                 throw AppRuntimeException("Order not found", HttpStatus.BAD_REQUEST,o)
                             }
                             o.status = status
+                            if(!order.delivery.isNullOrEmpty()){
+                                o.delivery = order.delivery
+                            }
                         }
                         .flatMap(orderRepository::save)
                         .doOnNext {

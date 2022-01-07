@@ -29,6 +29,15 @@ data class ProductEntity(
     var price: BigDecimal
 )
 
+data class DeliveryEntity(
+    @JsonProperty("shippingAddress")
+    var shippingAddress: String?,
+    @JsonProperty("productId")
+    var productId: ObjectId?,
+    @JsonProperty("warehouseId")
+    var warehouseId: ObjectId?,
+)
+
 data class OrderEntity(
     @JsonProperty("id")
     var id: ObjectId,
@@ -38,6 +47,8 @@ data class OrderEntity(
     var buyer: String? = null,
     @JsonProperty("products")
     var products: List<ProductEntity> = emptyList(),
+    @JsonProperty("delivery")
+    var delivery: List<DeliveryEntity>? = emptyList(),
 )
 
 

@@ -11,5 +11,6 @@ data class OrderEntity (
     var id: ObjectId? = ObjectId.get(),
     var status: String? = null,
     var buyer: String? = null,
-    var products: List<ProductEntity>? = null
+    var products: List<ProductEntity>? = null,
+    var delivery: List<DeliveryEntity>? = null
 )
