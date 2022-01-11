@@ -1,7 +1,6 @@
 package it.polito.wa2.order.dto
 
 import it.polito.wa2.order.domain.OrderEntity
-import it.polito.wa2.order.domain.ProductEntity
 import org.bson.types.ObjectId
 import javax.validation.constraints.NotBlank
 
@@ -13,6 +12,7 @@ data class OrderDTO(
     var buyer: String? = "",
 
     var products: List<ProductDTO>? = emptyList(),
+    var delivery: List<DeliveryDTO>? = emptyList(),
 )
 
 fun OrderEntity.toOrderDTO(): OrderDTO {
@@ -20,6 +20,7 @@ fun OrderEntity.toOrderDTO(): OrderDTO {
         id = id,
         status = status,
         buyer = buyer,
-        products = products?.map { it.toOrderDTO() }?.toList()
+        products = products?.map { it.toOrderDTO() }?.toList(),
+        delivery = delivery?.map { it.toOrderDTO() }?.toList()
     )
 }

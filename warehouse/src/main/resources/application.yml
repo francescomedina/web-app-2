@@ -50,6 +50,8 @@ topics:
   in-error: wallet-error.topic
   out-error: warehouse-error.topic
 
+CONSUMER_TOPIC: order.topic,wallet.topic
+
 logging:
   level:
     root: INFO

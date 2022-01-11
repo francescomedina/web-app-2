@@ -6,8 +6,12 @@ import org.springframework.boot.runApplication
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
+import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory
+import org.springframework.data.mongodb.ReactiveMongoTransactionManager
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.JavaMailSenderImpl
+import org.springframework.transaction.annotation.EnableTransactionManagement
+import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.web.bind.annotation.RestController
 
 @SpringBootApplication
@@ -50,6 +54,16 @@ class OrderApplication {
         props["mail.debug"] = debug
 
         return mailSender
+    }
+
+    @Bean
+    fun transactionalOperator(tmx: ReactiveMongoTransactionManager) : TransactionalOperator {
+        return TransactionalOperator.create(tmx)
+    }
+
+    @Bean
+    fun transactionManager(dbf: ReactiveMongoDatabaseFactory) : ReactiveMongoTransactionManager {
+        return ReactiveMongoTransactionManager(dbf)
     }
 }
 

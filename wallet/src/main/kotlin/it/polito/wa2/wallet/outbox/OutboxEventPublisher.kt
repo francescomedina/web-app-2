@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Mono
 
 
 @Component
@@ -19,19 +20,15 @@ class OutboxEventPublisher @Autowired constructor(
 		this.objectMapper = objectMapper
 	}
 
-	suspend fun publish(channel: String?, aggregateId: String, payload: String, type: String) {
-		try {
+	fun publish(channel: String?, aggregateId: String, payload: String, type: String): Mono<OutboxEvent> {
 //			val payload = objectMapper.writeValueAsString(wallet)
-			val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
-			val headers: MutableMap<String, String> = HashMap()
-			headers["aggregate_id"] = aggregateId
-			headers["message_id"] = outboxEvent.messageId.toString()
-			headers["type"] = type
-			val encodedHeaders = objectMapper.writeValueAsString(headers)
-			outboxEvent.headers = encodedHeaders
-			outboxEventRepository.save(outboxEvent).awaitSingle()
-		} catch (ex: Exception) {
-			throw RuntimeException(ex)
-		}
+		val outboxEvent = OutboxEvent(channel = channel!!, messageKey = aggregateId,payload = payload, type = type)
+		val headers: MutableMap<String, String> = HashMap()
+		headers["aggregate_id"] = aggregateId
+		headers["message_id"] = outboxEvent.messageId.toString()
+		headers["type"] = type
+		val encodedHeaders = objectMapper.writeValueAsString(headers)
+		outboxEvent.headers = encodedHeaders
+		return outboxEventRepository.save(outboxEvent)
 	}
 }
