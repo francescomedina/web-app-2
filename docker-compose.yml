@@ -80,7 +80,7 @@ services:
   mongosetup:
     image: "mongo-setup"
     build: "./mongo"
-    container_name: "mongosetup"
+    container_name: mongosetup
     depends_on:
       - mongodb-primary
 

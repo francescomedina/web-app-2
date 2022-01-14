@@ -9,8 +9,8 @@ COPY init-wallet.json /init-wallet.json
 COPY init-warehouse.json /init-warehouse.json
 COPY init-product.json /init-product.json
 COPY init-product-availability.json /init-product-availability.json
-RUN chmod +x /config/wait-for-it.sh
 RUN chmod +x /config/mongo-setup.sh
+RUN chmod +x /config/wait-for-it.sh
 CMD [ "bash", "-c", "/config/wait-for-it.sh mongodb-primary:27017 -- /config/mongo-setup.sh \
     && mongoimport --host mongodb-primary --db user-db --collection user --drop --file /init-user.json --jsonArray \
     && mongoimport --host mongodb-primary --db wallet-db --collection wallet --drop --file /init-wallet.json --jsonArray \
