@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono
 
 interface ProductRepository : ReactiveMongoRepository<ProductEntity, String> {
 
-    fun findAllByCategory(category: Enum<Category>): Flux<ProductEntity?>
+    fun findAllByCategory(category: Category): Flux<ProductEntity?>
 
 }

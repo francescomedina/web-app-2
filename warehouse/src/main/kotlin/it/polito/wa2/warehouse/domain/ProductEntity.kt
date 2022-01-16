@@ -17,14 +17,15 @@ data class ProductEntity (
     val id: ObjectId? = ObjectId.get(),
 
     val name: String,
-    val description: String,
-    val pictureURL: String,
-    val category: Category,
+
+    val description: String?,
+    var pictureURL: String?,
+    val category: Category?,
 
     @Min(0) //Amount greater or equal to 0
     val price: BigDecimal = BigDecimal(0),
 
-    val averageRating: Float,
+    val averageRating: Float = 0F,
     val rating: List<RatingEntity> = emptyList(),
 
     val createdDate: Instant = Instant.now(),

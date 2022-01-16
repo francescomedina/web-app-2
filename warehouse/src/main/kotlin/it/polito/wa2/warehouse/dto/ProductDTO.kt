@@ -35,11 +35,11 @@ data class ProductDTO(
 data class UpdateProductDTO(
 
     val id: ObjectId? = null,
-    val name: String = "",
+    val name: String?,
 
     // Optional field
-    val description: String? = "",
-    val pictureURL: String? = "",
+    val description: String?,
+    val pictureURL: String?,
     val category: String? = null,
 
     @field:DecimalMin(value = "0.0", message = "Price must be positive")
@@ -54,7 +54,7 @@ fun ProductEntity.toProductDTO(): ProductDTO {
         id = id,
         name = name,
         description = name,
-        category = category.name,
+        category = category?.name,
         pictureURL = pictureURL,
         price = price,
         averageRating = averageRating,
