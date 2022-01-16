@@ -57,8 +57,19 @@ class SecurityConfig {
             .pathMatchers("/auth/user/**").hasAuthority(Rolename.CUSTOMER.toString())
 
             .pathMatchers("/auth/**").permitAll()
+
+            .pathMatchers(HttpMethod.POST, "/products-composite/addRating/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.PATCH, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.PUT, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.DELETE, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
             .pathMatchers(HttpMethod.GET, "/products-composite/**").permitAll()
+
+            .pathMatchers(HttpMethod.POST, "/warehouse-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.PATCH, "/warehouse-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.PUT, "/warehouse-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.DELETE, "/warehouse-composite/**").hasAuthority(Rolename.ADMIN.toString())
+            .pathMatchers(HttpMethod.GET, "/warehouse-composite/**").permitAll()
 
             // The other exchange (route) are authenticated
             .anyExchange().authenticated()

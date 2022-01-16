@@ -6,4 +6,5 @@ interface WarehouseService {
     fun getWarehouses(): List<String>
     fun getWarehouseByID(warehouseID: String): WarehouseDTO
     fun createWarehouse(warehouseDTO: WarehouseDTO): WarehouseDTO
+    fun getWarehouseIdByProductID(productID: String): List<String>
 }

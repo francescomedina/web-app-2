@@ -3,16 +3,16 @@ package it.polito.wa2.warehouse.controllers
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
-import it.polito.wa2.warehouse.domain.Category
-import it.polito.wa2.warehouse.domain.convertStringToEnum
 import it.polito.wa2.warehouse.dto.ProductDTO
+import it.polito.wa2.warehouse.dto.RatingDTO
 import it.polito.wa2.warehouse.dto.UpdateProductDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
+import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import javax.validation.Valid
 
 @RestController
@@ -33,14 +33,12 @@ class ProductController(
     @GetMapping
     suspend fun getProductsByCategory(
         @RequestParam("category", required = false) category: String?
-    ): ResponseEntity<Flux<ProductDTO>> {
+    ): ResponseEntity<MutableList<ProductDTO>> {
 
         try {
-            // Check if category name is valid
-            val categoryEnum: Category? = convertStringToEnum(category)
 
             // Ask the products to the service
-            val productsDTO: Flux<ProductDTO> = productServiceImpl.getProductsByCategory(categoryEnum)
+            val productsDTO = productServiceImpl.getProductsByCategory(category).collectList().awaitSingle()
 
             // Return a 200 with inside all products or all products of that category
             return ResponseEntity.status(HttpStatus.OK).body(productsDTO)
@@ -60,7 +58,7 @@ class ProductController(
      * @param productID: id of the product to retrieve
      * @return the product with that productID
      */
-    @GetMapping("/products/{productID}")
+    @GetMapping("/{productID}")
     suspend fun getProductById(
         @PathVariable productID: String
     ): ResponseEntity<ProductDTO> {
@@ -90,7 +88,7 @@ class ProductController(
     suspend fun createProduct(
         @RequestBody @Valid productDTO: ProductDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<ProductDTO> {
+    ): ResponseEntity<Mono<ProductDTO>> {
 
         try {
             // Extract userInfo from JWT
@@ -102,7 +100,7 @@ class ProductController(
             }
 
             // Ask the service to create the product
-            val createdProductDTO: ProductDTO = productServiceImpl.createProduct(productDTO)
+            val createdProductDTO: Mono<ProductDTO> = productServiceImpl.createProduct(productDTO)
 
             // Return a 200 with inside the product created
             return ResponseEntity.status(HttpStatus.CREATED).body(createdProductDTO)
@@ -127,7 +125,7 @@ class ProductController(
         @PathVariable productID: String,
         @RequestBody @Valid productDTO: ProductDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<ProductDTO>{
+    ): ResponseEntity<Mono<ProductDTO>> {
         try {
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
@@ -138,7 +136,7 @@ class ProductController(
             }
 
             // Ask the service to update (entirely) the product
-            val updatedProductDTO: ProductDTO = productServiceImpl.updateProduct(productID, productDTO)
+            val updatedProductDTO: Mono<ProductDTO> = productServiceImpl.updateProduct(productID, productDTO)
 
             // Return a 200 with inside the product updated/created
             return ResponseEntity.status(HttpStatus.CREATED).body(updatedProductDTO)
@@ -162,7 +160,7 @@ class ProductController(
         @PathVariable productID: String,
         @RequestBody @Valid productDTO: UpdateProductDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<ProductDTO>{
+    ): ResponseEntity<Mono<ProductDTO>> {
         try {
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
@@ -173,7 +171,7 @@ class ProductController(
             }
 
             // Ask the service to update (partially) the product
-            val updatedProductDTO: ProductDTO = productServiceImpl.updatePartiallyProduct(productID, productDTO)
+            val updatedProductDTO: Mono<ProductDTO> = productServiceImpl.updatePartiallyProduct(productID, productDTO)
 
             // Return a 200 with inside the product updated
             return ResponseEntity.status(HttpStatus.CREATED).body(updatedProductDTO)
@@ -192,10 +190,10 @@ class ProductController(
      * @return the product deleted
      */
     @DeleteMapping("/{productID}")
-    fun deleteProductById(
+    suspend fun deleteProductById(
         @PathVariable productID: String,
         @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<ProductDTO>{
+    ): ResponseEntity<Mono<Void>> {
         try {
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
@@ -206,7 +204,7 @@ class ProductController(
             }
 
             // Ask the service to delete the product
-            val deletedProductDTO: ProductDTO = productServiceImpl.deleteProductById(productID)
+            val deletedProductDTO: Mono<Void> = productServiceImpl.deleteProductById(productID)
 
             // Return a 200 with inside the product deleted
             return ResponseEntity.status(HttpStatus.OK).body(deletedProductDTO)
@@ -224,7 +222,7 @@ class ProductController(
      * @return the picture URL
      */
     @GetMapping("/{productID}/picture")
-    fun getPictureById(
+    suspend fun getPictureById(
         @PathVariable productID: String,
     ): ResponseEntity<String>{
         try {
@@ -247,10 +245,11 @@ class ProductController(
      * @return the new picture URL
      */
     @PostMapping("/{productID}/picture")
-    fun updatePictureById(
+    suspend fun updatePictureById(
         @PathVariable productID: String,
-        @RequestHeader(name = "Authorization") jwtToken: String
-    ): ResponseEntity<String>{
+        @RequestHeader(name = "Authorization") jwtToken: String,
+        @RequestBody @Valid productDTO: UpdateProductDTO,
+    ): ResponseEntity<Mono<ProductDTO>> {
         try {
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
@@ -261,10 +260,10 @@ class ProductController(
             }
 
             // Ask the service to update (entirely) the picture of the product
-            val newPictureURL: String = productServiceImpl.updatePictureById(productID)
+            val newPictureURL = productServiceImpl.updatePictureById(productID, productDTO.pictureURL)
 
             // Return a 200 with inside the new picture URL
-            return ResponseEntity.status(HttpStatus.OK).body(newPictureURL)
+            return ResponseEntity.status(HttpStatus.CREATED).body(newPictureURL)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
@@ -272,22 +271,27 @@ class ProductController(
         }
     }
 
-    /**
-     * GET /products/{productID}/warehouse
-     * Gets the list of the warehouse
-     * This is a public endpoint
-     * @return the list of warehouseID in which the product of that productID is
-     */
-    @GetMapping("/{productID}/warehouse")
-    fun getWarehouseByProductID(
+    @PostMapping("/addRating/{productID}")
+    suspend fun createRating(
         @PathVariable productID: String,
-    ): ResponseEntity<List<String>> {
-        try {
-            // Ask the picture URL of a product with that productID to the service
-            val warehouseIDs: List<String> = productServiceImpl.getWarehouseIdByProductID(productID)
+        @RequestBody @Valid ratingDTO: RatingDTO,
+        @RequestHeader(name = "Authorization") jwtToken: String
+    ): ResponseEntity<Mono<ProductDTO>> {
 
-            // Return a 200 with inside the list of warehouseIDs
-            return ResponseEntity.status(HttpStatus.OK).body(warehouseIDs)
+        try {
+            // Extract userInfo from JWT
+            val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
+
+            // If the user is not an admin, we will return an error
+            if (!userInfoJWT.isCustomer()) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
+            }
+
+            // Ask the service to create the product
+            val newRating: Mono<ProductDTO> = productServiceImpl.createRating(productID, ratingDTO)
+
+            // Return a 200 with inside the product created
+            return ResponseEntity.status(HttpStatus.CREATED).body(newRating)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message

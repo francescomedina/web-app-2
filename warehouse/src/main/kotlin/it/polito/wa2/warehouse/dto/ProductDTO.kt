@@ -5,6 +5,7 @@ import it.polito.wa2.warehouse.domain.ProductEntity
 import it.polito.wa2.warehouse.domain.RatingEntity
 import org.bson.types.ObjectId
 import java.math.BigDecimal
+import java.time.Instant
 import javax.validation.constraints.DecimalMin
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
@@ -28,25 +29,25 @@ data class ProductDTO(
     val price: BigDecimal? = null,
 
     val averageRating: Float = 0.0f,
-    val rating: List<RatingEntity> = emptyList(),
+    val rating: List<RatingDTO> = emptyList(),
 )
 
 
 data class UpdateProductDTO(
 
     val id: ObjectId? = null,
-    val name: String = "",
+    val name: String?,
 
     // Optional field
-    val description: String? = "",
-    val pictureURL: String? = "",
+    val description: String?,
+    val pictureURL: String?,
     val category: String? = null,
 
     @field:DecimalMin(value = "0.0", message = "Price must be positive")
     val price: BigDecimal? = null,
 
     val averageRating: Float = 0.0f,
-    val rating: List<RatingEntity> = emptyList(),
+    val rating: List<RatingDTO> = emptyList(),
 )
 
 fun ProductEntity.toProductDTO(): ProductDTO {
@@ -54,10 +55,26 @@ fun ProductEntity.toProductDTO(): ProductDTO {
         id = id,
         name = name,
         description = name,
-        category = category.name,
+        category = category?.name,
         pictureURL = pictureURL,
         price = price,
         averageRating = averageRating,
-        rating = rating
+        rating = rating.map { it.toRatingDTO() }
     )
+}
+
+
+data class RatingDTO(
+    @field:NotBlank(message = "Title is required")
+    val title: String ="",
+    val body: String = "",
+
+    @field:NotNull(message ="Stars number is required")
+    val stars: Int? = null,
+
+    val createdDate: Instant?,
+)
+
+fun RatingEntity.toRatingDTO() : RatingDTO {
+    return RatingDTO(title = title, body = body, stars = stars, createdDate = createdDate)
 }

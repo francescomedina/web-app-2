@@ -119,6 +119,30 @@ class WarehouseController(
     }
 
     /**
+     * GET /products/{productID}/warehouse
+     * //TODO: Put inside warehouseController
+     * Gets the list of the warehouse
+     * This is a public endpoint
+     * @return the list of warehouseID in which the product of that productID is
+     */
+    @GetMapping("/{productID}/warehouse")
+    fun getWarehouseByProductID(
+        @PathVariable productID: String,
+    ): ResponseEntity<List<String>> {
+        try {
+            // Ask the picture URL of a product with that productID to the service
+            val warehouseIDs: List<String> = warehouseServiceImpl.getWarehouseIdByProductID(productID)
+
+            // Return a 200 with inside the list of warehouseIDs
+            return ResponseEntity.status(HttpStatus.OK).body(warehouseIDs)
+
+        } catch (error: ErrorResponse) {
+            // There was an error. Return an error message
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
+    }
+
+    /**
      * PUT /warehouses/{warehouseID}
      * Updates an existing warehouse (full representation), or adds a new one if not exist
      * @param warehouseID: id of the warehouse to update

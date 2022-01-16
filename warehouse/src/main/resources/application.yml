@@ -20,14 +20,8 @@ eureka:
     initialInstanceInfoReplicationIntervalSeconds: 5
     registryFetchIntervalSeconds: 5
   instance:
-    hostname: localhost
     leaseRenewalIntervalInSeconds: 5
     leaseExpirationDurationInSeconds: 5
-
-#spring.data.mongodb:
-#  host: localhost
-#  port: 27017
-#  database: warehouse-db
 
 spring:
   kafka:
