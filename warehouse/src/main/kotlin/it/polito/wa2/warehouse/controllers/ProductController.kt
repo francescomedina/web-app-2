@@ -4,6 +4,7 @@ import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
 import it.polito.wa2.warehouse.dto.ProductDTO
+import it.polito.wa2.warehouse.dto.RatingDTO
 import it.polito.wa2.warehouse.dto.UpdateProductDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import kotlinx.coroutines.reactor.awaitSingle
@@ -270,23 +271,27 @@ class ProductController(
         }
     }
 
-    /**
-     * GET /products/{productID}/warehouse
-     * //TODO: Put inside warehouseController
-     * Gets the list of the warehouse
-     * This is a public endpoint
-     * @return the list of warehouseID in which the product of that productID is
-     */
-    @GetMapping("/{productID}/warehouse")
-    fun getWarehouseByProductID(
+    @PostMapping("/addRating/{productID}")
+    suspend fun createRating(
         @PathVariable productID: String,
-    ): ResponseEntity<List<String>> {
-        try {
-            // Ask the picture URL of a product with that productID to the service
-            val warehouseIDs: List<String> = productServiceImpl.getWarehouseIdByProductID(productID)
+        @RequestBody @Valid ratingDTO: RatingDTO,
+        @RequestHeader(name = "Authorization") jwtToken: String
+    ): ResponseEntity<Mono<ProductDTO>> {
 
-            // Return a 200 with inside the list of warehouseIDs
-            return ResponseEntity.status(HttpStatus.OK).body(warehouseIDs)
+        try {
+            // Extract userInfo from JWT
+            val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
+
+            // If the user is not an admin, we will return an error
+            if (!userInfoJWT.isCustomer()) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
+            }
+
+            // Ask the service to create the product
+            val newRating: Mono<ProductDTO> = productServiceImpl.createRating(productID, ratingDTO)
+
+            // Return a 200 with inside the product created
+            return ResponseEntity.status(HttpStatus.CREATED).body(newRating)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message

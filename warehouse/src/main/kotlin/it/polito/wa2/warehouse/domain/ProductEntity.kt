@@ -25,8 +25,8 @@ data class ProductEntity (
     @Min(0) //Amount greater or equal to 0
     val price: BigDecimal = BigDecimal(0),
 
-    val averageRating: Float = 0F,
-    val rating: List<RatingEntity> = emptyList(),
+    var averageRating: Float = 0F,
+    val rating: MutableList<RatingEntity> = mutableListOf(),
 
     val createdDate: Instant = Instant.now(),
 )

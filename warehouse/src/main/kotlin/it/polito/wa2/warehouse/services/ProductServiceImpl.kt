@@ -3,8 +3,10 @@ package it.polito.wa2.warehouse.services
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.warehouse.domain.Category
 import it.polito.wa2.warehouse.domain.ProductEntity
+import it.polito.wa2.warehouse.domain.RatingEntity
 import it.polito.wa2.warehouse.domain.convertStringToEnum
 import it.polito.wa2.warehouse.dto.ProductDTO
+import it.polito.wa2.warehouse.dto.RatingDTO
 import it.polito.wa2.warehouse.dto.UpdateProductDTO
 import it.polito.wa2.warehouse.dto.toProductDTO
 import it.polito.wa2.warehouse.repository.ProductRepository
@@ -135,8 +137,25 @@ class ProductServiceImpl(
         }
     }
 
-    override fun getWarehouseIdByProductID(productID: String): List<String> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun createRating(productID: String, ratingDTO: RatingDTO): Mono<ProductDTO> {
+        if (ratingDTO.title == "" || ratingDTO.stars == null) {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Fields missing: title and stars")
+        }
 
+        val product = productRepository.findById(productID).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product not found")
+
+        val rating = RatingEntity(title = ratingDTO.title, stars = ratingDTO.stars, body = ratingDTO.body)
+
+        // Update the rating
+        val newAvgRating = ( product.averageRating * product.rating.size + rating.stars ) / (product.rating.size+1)
+
+        product.rating.add(rating)
+        product.averageRating = newAvgRating
+
+        return productRepository.save(product).map {
+            it.toProductDTO()
+        }
+
+    }
 }

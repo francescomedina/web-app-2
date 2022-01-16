@@ -22,4 +22,8 @@ class WarehouseServiceImpl (
         TODO("Not yet implemented")
     }
 
+    override fun getWarehouseIdByProductID(productID: String): List<String> {
+        TODO("Not yet implemented")
+    }
+
 }
