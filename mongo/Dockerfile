@@ -17,5 +17,5 @@ CMD [ "bash", "-c", "/config/wait-for-it.sh mongodb-primary:27017 -- /config/mon
     && mongoimport --host mongodb-primary --db warehouse-db --collection warehouse --drop --file /init-warehouse.json --jsonArray \
     && mongoimport --host mongodb-primary --db warehouse-db --collection product --drop --file /init-product.json --jsonArray \
     && mongoimport --host mongodb-primary --db warehouse-db --collection product-availability --drop --file /init-product-availability.json --jsonArray"]
-CMD ["bash", "-c", "use user-db && db.user.createIndex({ \"username\": 1 }, { unique: true, }) "]
+CMD ["mongo --host mongodb-primary --db user-db && db.user.createIndex({ \"username\": 1 }, { unique: true, }) "]
 
