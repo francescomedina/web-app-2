@@ -4,15 +4,11 @@ import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 
-
-@Document(collection = "product-availability")
 data class ProductAvailabilityEntity (
     @Id
     var id: ObjectId = ObjectId.get(),
 
     var productId: ObjectId,
-    var warehouseId: ObjectId,
     var quantity: Int,
     var min_quantity: Int
-
 )

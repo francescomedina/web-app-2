@@ -3,8 +3,9 @@ package it.polito.wa2.warehouse
 import com.fasterxml.jackson.annotation.JsonProperty
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.warehouse.domain.ProductAvailabilityEntity
+import it.polito.wa2.warehouse.domain.WarehouseEntity
 import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
-import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
+import it.polito.wa2.warehouse.repository.WarehouseRepository
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
@@ -57,7 +58,7 @@ data class OrderEntity(
 class ReactiveConsumerService(
     val reactiveKafkaConsumerTemplate: ReactiveKafkaConsumerTemplate<String, String>,
     val reactiveProducerService: ReactiveProducerService,
-    val productAvailabilityRepository: ProductAvailabilityRepository,
+    val warehouseRepository: WarehouseRepository,
     val eventPublisher: OutboxEventPublisher,
 ) : CommandLineRunner {
 
@@ -69,7 +70,7 @@ class ReactiveConsumerService(
             .flatMapMany { products ->
                 Flux.fromIterable(products)
                     .doOnNext {
-                        productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
+                        warehouseRepository.findOneByProductsProductIdAndProductsQuantityGreaterThanEqual(it.id,it.quantity)
                             .doOnNext { p -> Assert.isTrue(p!=null,"Product no more available") }
                             .subscribe()
                     }
@@ -123,22 +124,23 @@ class ReactiveConsumerService(
     }
 
     @Transactional
-    fun decrementQuantity(order: OrderEntity): Flux<ProductAvailabilityEntity> {
+    fun decrementQuantity(order: OrderEntity): Flux<WarehouseEntity> {
         val deliveryMap = hashMapOf<ObjectId, MutableList<ProductEntity>>()
         return Flux.fromIterable(order.products)
                 .flatMap {
-                    productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
-                        .doOnNext { p ->
-                            Assert.isTrue(p!=null, "Product is no more available")
+                    warehouseRepository.findOneByProductsProductIdAndProductsQuantityGreaterThanEqual(it.id,it.quantity)
+                        .doOnNext { w ->
+                            Assert.isTrue(w!=null, "Product is no more available")
+                            val p = w?.products?.find { pa -> pa.productId == it.id }
                             p!!.quantity -= it.quantity
-                            if(deliveryMap[p!!.warehouseId].isNullOrEmpty()){
-                                deliveryMap[p.warehouseId] = mutableListOf(it)
+                            if(deliveryMap[w!!.id].isNullOrEmpty()){
+                                deliveryMap[w.id] = mutableListOf(it)
                             }else{
-                                deliveryMap[p.warehouseId]?.add(it)
+                                deliveryMap[w.id]?.add(it)
                             }
                         }
                 }
-                .flatMap { productAvailabilityRepository.save(it!!) }
+                .flatMap { warehouseRepository.save(it!!) }
                 .doOnError { throw RuntimeException("Error on productAvailability") }
                 .doOnComplete { // Si applica alla fine di tutti i flussi, in questo caso dopo aver iterato tutti i prodotti
                     val tmp = mutableListOf<DeliveryEntity>()
@@ -177,7 +179,7 @@ class ReactiveConsumerService(
             .doOnNext {
                 Flux.fromIterable(it.products)
                     .doOnNext { p ->
-                        productAvailabilityRepository.findOneByWarehouseIdAndProductId(it!!.warehouseId,p.id)
+                        warehouseRepository.findOneByIdAndProductsProductId(it!!.warehouseId,p.id)
                             .doOnNext { pa ->
                                 pa!!.quantity += p.quantity
                                 productAvailabilityRepository.save(pa!!).subscribe()

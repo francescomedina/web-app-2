@@ -6,12 +6,15 @@ import it.polito.wa2.util.jwt.JwtValidateUtils
 import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.RatingDTO
 import it.polito.wa2.warehouse.dto.UpdateProductDTO
+import it.polito.wa2.warehouse.dto.WarehouseDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
+import it.polito.wa2.warehouse.services.WarehouseServiceImpl
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import javax.validation.Valid
 
@@ -19,6 +22,7 @@ import javax.validation.Valid
 @RequestMapping("/products")
 class ProductController(
     val productServiceImpl: ProductServiceImpl,
+    val warehouseServiceImpl: WarehouseServiceImpl,
     val jwtUtils: JwtValidateUtils,
 ) {
 
@@ -75,6 +79,29 @@ class ProductController(
             throw ResponseStatusException(error.status, error.errorMessage)
         }
 
+    }
+
+    /**
+     * GET /products/{productID}/warehouses
+     * Gets the list of the warehouse
+     * This is a public endpoint
+     * @return the list of warehouseID in which the product of that productID is
+     */
+    @GetMapping("/{productID}/warehouses")
+    fun getWarehouseByProductID(
+        @PathVariable productID: String,
+    ): ResponseEntity<Flux<WarehouseDTO>> {
+        try {
+            // Ask the picture URL of a product with that productID to the service
+            val warehouses = warehouseServiceImpl.getWarehouseIdByProductID(productID)
+
+            // Return a 200 with inside the list of warehouseIDs
+            return ResponseEntity.status(HttpStatus.OK).body(warehouses)
+
+        } catch (error: ErrorResponse) {
+            // There was an error. Return an error message
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
     }
 
     /**

@@ -11,4 +11,5 @@ data class WarehouseEntity(
 
     val name: String,
     val region: String,
+    var products: List<ProductAvailabilityEntity>?
 )
