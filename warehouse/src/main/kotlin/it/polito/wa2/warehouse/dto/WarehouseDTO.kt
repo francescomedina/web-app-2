@@ -8,7 +8,6 @@ data class WarehouseDTO (
 
     val name: String? = "",
     val region: String? = "",
-    val products: List<ProductAvailabilityDTO>?
 )
 
 fun WarehouseEntity.toWarehouseDTO(): WarehouseDTO {
@@ -16,6 +15,5 @@ fun WarehouseEntity.toWarehouseDTO(): WarehouseDTO {
         id = id,
         name = name,
         region = region,
-        products = products?.map { it.toProductAvailabilityDTO() }
     )
 }

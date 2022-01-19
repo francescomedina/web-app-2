@@ -210,11 +210,11 @@ class WarehouseController(
      * @return the new product with quantity
      */
     @PostMapping("/{warehouseID}/products")
-    suspend fun addWarehouseProduct(
+    suspend fun createProductAvailability(
         @PathVariable warehouseID: String,
         @RequestHeader(name = "Authorization") jwtToken: String,
         @RequestBody @Valid productAvailabilityDTO: ProductAvailabilityDTO,
-    ) : ResponseEntity<Mono<WarehouseDTO>> {
+    ) : ResponseEntity<Mono<ProductAvailabilityDTO>> {
 
         try {
             // Extract userInfo from JWT
@@ -225,7 +225,7 @@ class WarehouseController(
                 throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
             }
 
-            val updatedWarehouse = warehouseServiceImpl.addProductAvailability(warehouseID,productAvailabilityDTO)
+            val updatedWarehouse = warehouseServiceImpl.createProductAvailability(productAvailabilityDTO)
 
             // Return a 200 with inside the warehouse information
             return ResponseEntity.status(HttpStatus.CREATED).body(updatedWarehouse)
@@ -237,19 +237,18 @@ class WarehouseController(
     }
 
     /**
-     * PATCH /{warehouseID}/products/{productID}
+     * PATCH /products/{productID}
      * Updates quantity of a product. Negative if order is issued or positive if a rollback operation
      * @param productsID: id of the product to update the quantity
      * @param productAvailabilityDTO: quantity to update
      * @return the new product quantity in the warehouse
      */
-    @PatchMapping("/{warehouseID}/products/{productID}")
-    suspend fun updateWarehouseProduct(
-        @PathVariable warehouseID: String,
+    @PatchMapping("/products/{productID}")
+    suspend fun updateProductAvailability(
         @PathVariable productID: String,
         @RequestHeader(name = "Authorization") jwtToken: String,
         @RequestBody @Valid productAvailabilityDTO: ProductAvailabilityDTO,
-    ) : ResponseEntity<Mono<WarehouseDTO>> {
+    ) : ResponseEntity<Mono<ProductAvailabilityDTO>> {
 
         try {
             // Extract userInfo from JWT
@@ -260,7 +259,7 @@ class WarehouseController(
                 throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
             }
 
-            val updatedWarehouse = warehouseServiceImpl.updateProductAvailability(warehouseID,productAvailabilityDTO)
+            val updatedWarehouse = warehouseServiceImpl.updateProductAvailability(productID,productAvailabilityDTO)
 
             // Return a 200 with inside the warehouse information
             return ResponseEntity.status(HttpStatus.CREATED).body(updatedWarehouse)

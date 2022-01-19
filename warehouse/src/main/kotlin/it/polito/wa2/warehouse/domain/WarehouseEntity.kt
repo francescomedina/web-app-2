@@ -10,6 +10,5 @@ data class WarehouseEntity(
     val id: ObjectId = ObjectId.get(),
 
     val name: String,
-    val region: String,
-    var products: List<ProductAvailabilityEntity>?
+    val region: String
 )

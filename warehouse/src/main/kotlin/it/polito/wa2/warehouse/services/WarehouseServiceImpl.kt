@@ -3,6 +3,7 @@ package it.polito.wa2.warehouse.services
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.warehouse.domain.*
 import it.polito.wa2.warehouse.dto.*
+import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
 import it.polito.wa2.warehouse.repository.WarehouseRepository
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.bson.types.ObjectId
@@ -14,6 +15,7 @@ import reactor.core.publisher.Mono
 @Service
 class WarehouseServiceImpl (
     val warehouseRepository: WarehouseRepository,
+    val productAvailabilityRepository: ProductAvailabilityRepository
 ): WarehouseService  {
     override fun getWarehouses(): Flux<WarehouseDTO> {
         return warehouseRepository.findAll().map {
@@ -29,17 +31,10 @@ class WarehouseServiceImpl (
     override fun createWarehouse(warehouseDTO: WarehouseDTO): Mono<WarehouseDTO> {
         return warehouseRepository.save(WarehouseEntity(
             name = warehouseDTO.name!!,
-            region = warehouseDTO.region!!,
-            products = null
+            region = warehouseDTO.region!!
         )).map {
             it.toWarehouseDTO()
         }
-    }
-
-    override fun getWarehouseIdByProductID(productID: String): Flux<WarehouseDTO> {
-        return warehouseRepository.findAllByProductsProductId(productID).map {
-            it.toWarehouseDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
     }
 
     override fun updateWarehouse(warehouseID: String, warehouseDTO: WarehouseDTO): Mono<WarehouseDTO> {
@@ -47,7 +42,6 @@ class WarehouseServiceImpl (
             id = ObjectId(warehouseID),
             name = warehouseDTO.name!!,
             region = warehouseDTO.region!!,
-            products = null
         )).map {
             it.toWarehouseDTO()
         }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not updated")
@@ -61,14 +55,6 @@ class WarehouseServiceImpl (
             id = ObjectId(warehouseID),
             name = warehouseDTO.name ?: warehouse.name,
             region = warehouseDTO.region ?: warehouse.region,
-            products = warehouseDTO.products?.map {
-                ProductAvailabilityEntity(
-                    id = ObjectId(it.id.toString()),
-                    it.productId,
-                    it.quantity,
-                    it.min_quantity,
-                )
-            } ?: warehouse.products
         )
 
         return warehouseRepository.save(updateWarehouse).map {
@@ -83,44 +69,27 @@ class WarehouseServiceImpl (
         return warehouseRepository.delete(product)
     }
 
-    override suspend fun addProductAvailability(warehouseID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<WarehouseDTO>{
-        val warehouse = warehouseRepository.findById(warehouseID).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
-
-        val newProducts = mutableListOf<ProductAvailabilityEntity>()
-        if(warehouse.products != null){
-            newProducts.addAll(warehouse.products!!)
-        }
-        newProducts.add(
-            ProductAvailabilityEntity(
-                productId = productAvailabilityDTO.productId,
-                quantity = productAvailabilityDTO.quantity,
-                min_quantity = productAvailabilityDTO.min_quantity,
-        ))
-        warehouse.products = newProducts.toList()
-        return warehouseRepository.save(warehouse).map {
-            it.toWarehouseDTO()
-        }
+    override fun createProductAvailability(productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>{
+        return productAvailabilityRepository.save(ProductAvailabilityEntity(
+            productId = productAvailabilityDTO.productId,
+            quantity = productAvailabilityDTO.quantity,
+            min_quantity = productAvailabilityDTO.min_quantity,
+            warehouseId = productAvailabilityDTO.warehouseId
+        )).map {
+            it.toProductAvailabilityDTO()
+        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "addProductAvailability error")
     }
 
-    override suspend fun updateProductAvailability(warehouseID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<WarehouseDTO> {
-        val warehouse = warehouseRepository.findById(warehouseID).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
-
-        val newProducts = mutableListOf<ProductAvailabilityEntity>()
-        if(warehouse.products != null){
-            newProducts.addAll(warehouse.products!!)
-        }
-        newProducts.map {
-            if(it.id == productAvailabilityDTO.id && it.productId == productAvailabilityDTO.productId){
-                productAvailabilityDTO
-            }else{
-                it
-            }
-        }
-        warehouse.products = newProducts.toList()
-        return warehouseRepository.save(warehouse).map {
-            it.toWarehouseDTO()
-        }
+    override suspend fun updateProductAvailability(productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
+        val pa = productAvailabilityRepository.findById(productID).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product availability not found")
+        return productAvailabilityRepository.save(ProductAvailabilityEntity(
+            productId = productAvailabilityDTO.productId ?: pa.productId,
+            quantity = productAvailabilityDTO.quantity ?: pa.quantity,
+            min_quantity = productAvailabilityDTO.min_quantity ?: pa.min_quantity,
+            warehouseId = productAvailabilityDTO.warehouseId ?: pa.warehouseId
+        )).map {
+            it.toProductAvailabilityDTO()
+        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
     }
 }

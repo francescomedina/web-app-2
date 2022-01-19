@@ -8,9 +8,9 @@ import reactor.core.publisher.Mono
 
 interface WarehouseRepository : ReactiveMongoRepository<WarehouseEntity, String> {
 
-    fun findOneByProductsProductIdAndProductsQuantityGreaterThanEqual (productId: ObjectId, quantity: Int) : Mono<WarehouseEntity?>
-
-    fun findOneByIdAndProductsProductId (warehouseId: ObjectId, productId: ObjectId) : Mono<WarehouseEntity?>
-
-    fun findAllByProductsProductId(productId: String): Flux<WarehouseEntity>
+//    fun findOneByProductsProductIdAndProductsQuantityGreaterThanEqual (productId: ObjectId, quantity: Int) : Mono<WarehouseEntity?>
+//
+//    fun findOneByIdAndProductsProductId (warehouseId: ObjectId, productId: ObjectId) : Mono<WarehouseEntity?>
+//
+//    fun findAllByProductsProductId(productId: String): Flux<WarehouseEntity>
 }

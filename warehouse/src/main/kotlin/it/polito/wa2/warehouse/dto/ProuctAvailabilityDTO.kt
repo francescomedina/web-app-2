@@ -7,6 +7,7 @@ data class ProductAvailabilityDTO(
     val id: ObjectId? = null,
     val min_quantity: Int,
     val productId: ObjectId,
+    val warehouseId: ObjectId,
     val quantity: Int
 )
 
@@ -15,6 +16,7 @@ fun ProductAvailabilityEntity.toProductAvailabilityDTO(): ProductAvailabilityDTO
         id = id,
         min_quantity = min_quantity,
         productId = productId,
+        warehouseId = warehouseId,
         quantity = quantity
     )
 }
