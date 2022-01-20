@@ -80,7 +80,7 @@ class CatalogApplication {
                         f.circuitBreaker {
                                 it -> it.setFallbackUri("forward:/warehouse-failure")
                         }
-                        f.rewritePath("/warehouse-composite", "/warehouse")
+                        f.rewritePath("/warehouse-composite", "/warehouses")
 
                     }
                     .uri("lb://warehouse")

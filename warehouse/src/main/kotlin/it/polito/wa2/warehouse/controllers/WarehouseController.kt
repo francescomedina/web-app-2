@@ -9,6 +9,7 @@ import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.WarehouseDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
+import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -29,10 +30,10 @@ class WarehouseController(
      * @return the list of all warehouses
      */
     @GetMapping("/")
-    suspend fun getWarehouses(): ResponseEntity<Flux<WarehouseDTO>> {
+    suspend fun getWarehouses(): ResponseEntity<MutableList<WarehouseDTO>> {
         try {
             // Ask the list of warehouses to the service
-            val warehouses = warehouseServiceImpl.getWarehouses()
+            val warehouses = warehouseServiceImpl.getWarehouses().collectList().awaitSingle()
 
             // Return a 200 with inside list of all warehouses
             return ResponseEntity.status(HttpStatus.CREATED).body(warehouses)
@@ -243,8 +244,9 @@ class WarehouseController(
      * @param productAvailabilityDTO: quantity to update
      * @return the new product quantity in the warehouse
      */
-    @PatchMapping("/products/{productID}")
+    @PatchMapping("/{warehouseID}/products/{productID}")
     suspend fun updateProductAvailability(
+        @PathVariable warehouseID: String,
         @PathVariable productID: String,
         @RequestHeader(name = "Authorization") jwtToken: String,
         @RequestBody @Valid productAvailabilityDTO: ProductAvailabilityDTO,
@@ -259,7 +261,7 @@ class WarehouseController(
                 throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
             }
 
-            val updatedWarehouse = warehouseServiceImpl.updateProductAvailability(productID,productAvailabilityDTO)
+            val updatedWarehouse = warehouseServiceImpl.updateProductAvailability(warehouseID,productID,productAvailabilityDTO)
 
             // Return a 200 with inside the warehouse information
             return ResponseEntity.status(HttpStatus.CREATED).body(updatedWarehouse)

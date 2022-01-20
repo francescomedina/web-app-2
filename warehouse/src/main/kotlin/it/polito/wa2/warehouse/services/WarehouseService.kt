@@ -20,6 +20,7 @@ interface WarehouseService {
     fun updateWarehouse(warehouseID: String, warehouseDTO: WarehouseDTO): Mono<WarehouseDTO>
     suspend fun updatePartiallyWarehouse(warehouseID: String, warehouseDTO: WarehouseDTO): Mono<WarehouseDTO>
     suspend fun deleteWarehouse(warehouseID: String): Mono<Void>
+    fun getProductAvailabilityByProductId(productID: ObjectId): Flux<ProductAvailabilityDTO>
     fun createProductAvailability(productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>
-    suspend fun updateProductAvailability(productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>
+    suspend fun updateProductAvailability(warehouseID: String,productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>
 }

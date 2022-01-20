@@ -17,6 +17,7 @@ class WarehouseServiceImpl (
     val warehouseRepository: WarehouseRepository,
     val productAvailabilityRepository: ProductAvailabilityRepository
 ): WarehouseService  {
+
     override fun getWarehouses(): Flux<WarehouseDTO> {
         return warehouseRepository.findAll().map {
             it.toWarehouseDTO()
@@ -64,32 +65,39 @@ class WarehouseServiceImpl (
 
     override suspend fun deleteWarehouse(warehouseID: String): Mono<Void> {
         val product = warehouseRepository.findById(warehouseID).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product not found")
+            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
 
         return warehouseRepository.delete(product)
     }
 
-    override fun createProductAvailability(productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>{
-        return productAvailabilityRepository.save(ProductAvailabilityEntity(
-            productId = productAvailabilityDTO.productId,
-            quantity = productAvailabilityDTO.quantity,
-            min_quantity = productAvailabilityDTO.min_quantity,
-            warehouseId = productAvailabilityDTO.warehouseId
-        )).map {
+    override fun getProductAvailabilityByProductId(productID: ObjectId): Flux<ProductAvailabilityDTO> {
+        return productAvailabilityRepository.findAllByProductId(productID).map {
             it.toProductAvailabilityDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "addProductAvailability error")
+        }
     }
 
-    override suspend fun updateProductAvailability(productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
-        val pa = productAvailabilityRepository.findById(productID).awaitSingleOrNull()
+    override fun createProductAvailability(productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO>{
+        return productAvailabilityRepository.save(ProductAvailabilityEntity(
+            productId = productAvailabilityDTO.productId!!,
+            quantity = productAvailabilityDTO.quantity!!,
+            min_quantity = productAvailabilityDTO.min_quantity!!,
+            warehouseId = productAvailabilityDTO.warehouseId!!
+        )).map {
+            it.toProductAvailabilityDTO()
+        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "ProductAvailability not created")
+    }
+
+    override suspend fun updateProductAvailability(warehouseID: String,productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
+        val pa = productAvailabilityRepository.findOneByWarehouseIdAndProductId(ObjectId(warehouseID),ObjectId(productID)).awaitSingleOrNull()
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product availability not found")
         return productAvailabilityRepository.save(ProductAvailabilityEntity(
+            id = pa.id,
             productId = productAvailabilityDTO.productId ?: pa.productId,
             quantity = productAvailabilityDTO.quantity ?: pa.quantity,
             min_quantity = productAvailabilityDTO.min_quantity ?: pa.min_quantity,
             warehouseId = productAvailabilityDTO.warehouseId ?: pa.warehouseId
         )).map {
             it.toProductAvailabilityDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
+        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product availability not patched")
     }
 }

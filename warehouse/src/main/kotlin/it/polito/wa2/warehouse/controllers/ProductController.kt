@@ -3,13 +3,11 @@ package it.polito.wa2.warehouse.controllers
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
-import it.polito.wa2.warehouse.dto.ProductDTO
-import it.polito.wa2.warehouse.dto.RatingDTO
-import it.polito.wa2.warehouse.dto.UpdateProductDTO
-import it.polito.wa2.warehouse.dto.WarehouseDTO
+import it.polito.wa2.warehouse.dto.*
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
 import kotlinx.coroutines.reactor.awaitSingle
+import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -90,13 +88,13 @@ class ProductController(
     @GetMapping("/{productID}/warehouses")
     fun getWarehouseByProductID(
         @PathVariable productID: String,
-    ): ResponseEntity<Flux<WarehouseDTO>> {
+    ): ResponseEntity<Flux<ProductAvailabilityDTO>> {
         try {
             // Ask the picture URL of a product with that productID to the service
-            val warehouses = warehouseServiceImpl.getWarehouseIdByProductID(productID)
+            val productAvailabilityEntitty = warehouseServiceImpl.getProductAvailabilityByProductId(ObjectId(productID))
 
             // Return a 200 with inside the list of warehouseIDs
-            return ResponseEntity.status(HttpStatus.OK).body(warehouses)
+            return ResponseEntity.status(HttpStatus.OK).body(productAvailabilityEntitty)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message

@@ -5,10 +5,10 @@ import org.bson.types.ObjectId
 
 data class ProductAvailabilityDTO(
     val id: ObjectId? = null,
-    val min_quantity: Int,
-    val productId: ObjectId,
-    val warehouseId: ObjectId,
-    val quantity: Int
+    val min_quantity: Int?,
+    val productId: ObjectId?,
+    val warehouseId: ObjectId?,
+    val quantity: Int?
 )
 
 fun ProductAvailabilityEntity.toProductAvailabilityDTO(): ProductAvailabilityDTO {
