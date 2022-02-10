@@ -12,6 +12,12 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+data class PartiallyWarehouseDTO (
+    val id: ObjectId? = null,
+    val name: String? = "",
+    val region: String? = "",
+)
+
 @Service
 class WarehouseServiceImpl (
     val warehouseRepository: WarehouseRepository,
@@ -31,8 +37,8 @@ class WarehouseServiceImpl (
 
     override fun createWarehouse(warehouseDTO: WarehouseDTO): Mono<WarehouseDTO> {
         return warehouseRepository.save(WarehouseEntity(
-            name = warehouseDTO.name!!,
-            region = warehouseDTO.region!!
+            name = warehouseDTO.name,
+            region = warehouseDTO.region
         )).map {
             it.toWarehouseDTO()
         }
@@ -41,14 +47,14 @@ class WarehouseServiceImpl (
     override fun updateWarehouse(warehouseID: String, warehouseDTO: WarehouseDTO): Mono<WarehouseDTO> {
         return warehouseRepository.save(WarehouseEntity(
             id = ObjectId(warehouseID),
-            name = warehouseDTO.name!!,
-            region = warehouseDTO.region!!,
+            name = warehouseDTO.name,
+            region = warehouseDTO.region
         )).map {
             it.toWarehouseDTO()
         }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not updated")
     }
 
-    override suspend fun updatePartiallyWarehouse(warehouseID: String, warehouseDTO: WarehouseDTO): Mono<WarehouseDTO>{
+    override suspend fun updatePartiallyWarehouse(warehouseID: String, warehouseDTO: PartiallyWarehouseDTO): Mono<WarehouseDTO>{
         val warehouse = warehouseRepository.findById(warehouseID).awaitSingleOrNull()
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not found")
 

@@ -11,7 +11,6 @@ import it.polito.wa2.warehouse.dto.UpdateProductDTO
 import it.polito.wa2.warehouse.dto.toProductDTO
 import it.polito.wa2.warehouse.repository.ProductRepository
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.flux
 import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service

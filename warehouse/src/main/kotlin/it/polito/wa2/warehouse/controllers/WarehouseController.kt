@@ -7,6 +7,7 @@ import it.polito.wa2.warehouse.domain.WarehouseEntity
 import it.polito.wa2.warehouse.dto.ProductAvailabilityDTO
 import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.WarehouseDTO
+import it.polito.wa2.warehouse.services.PartiallyWarehouseDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
 import kotlinx.coroutines.reactor.awaitSingle
@@ -149,7 +150,7 @@ class WarehouseController(
     @PatchMapping("/{warehouseID}")
     suspend fun updatePartiallyWarehouse(
         @PathVariable warehouseID: String,
-        @RequestBody @Valid warehouseDTO: WarehouseDTO,
+        @RequestBody @Valid warehouseDTO: PartiallyWarehouseDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
     ) : ResponseEntity<Mono<WarehouseDTO>> {
 
