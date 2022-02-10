@@ -11,11 +11,24 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import javax.validation.constraints.DecimalMin
+import javax.validation.constraints.Min
+import javax.validation.constraints.NotNull
 
 data class PartiallyWarehouseDTO (
     val id: ObjectId? = null,
-    val name: String? = "",
-    val region: String? = "",
+    val name: String? = null,
+    val region: String? = null,
+)
+
+data class PartiallyProductAvailabilityDTO(
+    val id: ObjectId? = null,
+    @field:DecimalMin(value = "0.0", message="Min Quantity must be positive")
+    val min_quantity: Int?,
+    val productId: ObjectId?,
+    val warehouseId: ObjectId?,
+    @field:DecimalMin(value = "0.0", message="Quantity must be positive")
+    val quantity: Int?
 )
 
 @Service
@@ -93,7 +106,7 @@ class WarehouseServiceImpl (
         }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "ProductAvailability not created")
     }
 
-    override suspend fun updateProductAvailability(warehouseID: String,productID: String, productAvailabilityDTO: ProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
+    override suspend fun updateProductAvailability(warehouseID: String,productID: String, productAvailabilityDTO: PartiallyProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
         val pa = productAvailabilityRepository.findOneByWarehouseIdAndProductId(ObjectId(warehouseID),ObjectId(productID)).awaitSingleOrNull()
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product availability not found")
         return productAvailabilityRepository.save(ProductAvailabilityEntity(

@@ -7,6 +7,7 @@ import it.polito.wa2.warehouse.domain.WarehouseEntity
 import it.polito.wa2.warehouse.dto.ProductAvailabilityDTO
 import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.WarehouseDTO
+import it.polito.wa2.warehouse.services.PartiallyProductAvailabilityDTO
 import it.polito.wa2.warehouse.services.PartiallyWarehouseDTO
 import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
@@ -54,7 +55,6 @@ class WarehouseController(
     @GetMapping("/{warehouseID}")
     suspend fun getWarehouseByID(
         @PathVariable warehouseID: String,
-        @RequestHeader(name = "Authorization") jwtToken: String
     ): ResponseEntity<WarehouseDTO> {
         try {
 
@@ -250,7 +250,7 @@ class WarehouseController(
         @PathVariable warehouseID: String,
         @PathVariable productID: String,
         @RequestHeader(name = "Authorization") jwtToken: String,
-        @RequestBody @Valid productAvailabilityDTO: ProductAvailabilityDTO,
+        @RequestBody @Valid productAvailabilityDTO: PartiallyProductAvailabilityDTO,
     ) : ResponseEntity<Mono<ProductAvailabilityDTO>> {
 
         try {
