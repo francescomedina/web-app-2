@@ -5,6 +5,7 @@ import java.time.Instant
 data class RatingEntity(
     val title: String,
     val body: String,
+
     val stars: Int,
     val createdDate: Instant = Instant.now(),
 )

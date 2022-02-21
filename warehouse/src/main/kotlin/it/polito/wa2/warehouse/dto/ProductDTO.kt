@@ -7,9 +7,10 @@ import org.bson.types.ObjectId
 import java.math.BigDecimal
 import java.time.Instant
 import javax.validation.constraints.DecimalMin
+import javax.validation.constraints.Max
+import javax.validation.constraints.Min
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
-import javax.xml.bind.annotation.XmlEnumValue
 
 
 data class ProductDTO(
@@ -69,6 +70,8 @@ data class RatingDTO(
     val title: String ="",
     val body: String = "",
 
+    @field:Min(value = 1, message = "Minimum quantity must be 1")
+    @field:Max(value = 5, message = "Maximum quantity must be 5")
     @field:NotNull(message ="Stars number is required")
     val stars: Int? = null,
 

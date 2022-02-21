@@ -23,6 +23,7 @@ data class UserEntity(
 
     // The user can perform or not some operation
     var isEnable: Boolean = false,
+    var isAccountNonLocked: Boolean = true,
 
     var name: String = "",
     var surname: String = "",

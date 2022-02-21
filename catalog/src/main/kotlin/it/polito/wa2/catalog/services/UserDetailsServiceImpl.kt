@@ -51,7 +51,7 @@ class UserDetailsServiceImpl(
             ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Username not found")
 
         // Enable or disable the user
-        user.isEnable = isEnabled
+        user.isAccountNonLocked = isEnabled
         userRepository.save(user).awaitSingle()
     }
 
@@ -159,7 +159,10 @@ class UserDetailsServiceImpl(
     suspend fun getUserByUsername(username: String): UserDetailsDTO? {
         val user = userRepository.findByUsername(username).awaitSingleOrNull()
 
-        return user?.toUserDetailsDTO()
+        user?.let {
+            return it.toUserDetailsDTO()
+        }
+        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User does not exist")
     }
 
     /**

@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import java.lang.ClassCastException
 import java.security.Principal
 import javax.validation.Valid
 import javax.validation.constraints.NotBlank
@@ -107,6 +108,9 @@ class UserController(
         } catch (error: ErrorResponse) {
             // Some errors occurred, we return the errorMessage formatted inside updatePassword method
             throw ResponseStatusException(error.status, error.errorMessage)
+        }
+        catch (e: Exception){
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "You are not authenticated")
         }
     }
 
@@ -243,8 +247,12 @@ class UserController(
 
     @GetMapping("/admin/{username}")
     suspend fun userInfo(@PathVariable username: String): UserDetailsDTO? {
+        return try {
         // Only the admin can ask information about other users
         return userDetailsServiceImpl.getUserByUsername(username)
+        } catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
     }
 
 }
