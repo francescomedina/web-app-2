@@ -69,6 +69,23 @@ class ReactiveConsumerService(
             .flatMapMany { products ->
                 Flux.fromIterable(products)
                     .doOnNext {
+                        productAvailabilityRepository.findOneByProductId(it.id)
+                            .doOnNext { p -> Assert.isTrue(p!=null,"Product not found") }
+                            .doOnError {
+                                reactiveProducerService.send(
+                                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
+                                )
+                                throw RuntimeException(it)
+                            }
+                            .onErrorResume {
+                                reactiveProducerService.send(
+                                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
+                                )
+                                throw RuntimeException(it)
+                            }
+                            .subscribe()
+                    }
+                    .doOnNext {
                         productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
                             .doOnNext { p -> Assert.isTrue(p!=null,"Product no more available") }
                             .subscribe()
@@ -79,6 +96,12 @@ class ReactiveConsumerService(
                         )
                         throw RuntimeException(it)
                     }
+            }
+            .onErrorResume {
+                reactiveProducerService.send(
+                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
+                )
+                throw RuntimeException(it)
             }
             .doOnComplete {
                 reactiveProducerService.send(

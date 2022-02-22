@@ -58,6 +58,8 @@ class SecurityConfig {
 
             .pathMatchers("/auth/**").permitAll()
 
+            .pathMatchers("/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
+
             .pathMatchers(HttpMethod.POST, "/products-composite/addRating/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())
             .pathMatchers(HttpMethod.PATCH, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())

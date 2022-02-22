@@ -132,12 +132,7 @@ class OrderServiceImpl(
 
     override suspend fun getOrders(userInfoJWT: UserInfoJWT): Flux<OrderDTO> {
 
-        if (userInfoJWT.isAdmin()) {
-            val orders = orderRepository.findAll()
-                ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Order not found")
-            return orders.map { it.toOrderDTO() }
-        }
-
-        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see all orders")
+        val orders = orderRepository.findAllByBuyer(userInfoJWT.username)
+        return orders.map { it.toOrderDTO() }
     }
 }

@@ -12,5 +12,7 @@ interface ProductAvailabilityRepository: ReactiveMongoRepository<ProductAvailabi
 
     fun findOneByWarehouseIdAndProductId (warehouseId: ObjectId, productId: ObjectId) : Mono<ProductAvailabilityEntity?>
 
+    fun findOneByProductId (productId: ObjectId) : Mono<ProductAvailabilityEntity?>
+
     fun findAllByProductId(productId: ObjectId): Flux<ProductAvailabilityEntity>
 }
