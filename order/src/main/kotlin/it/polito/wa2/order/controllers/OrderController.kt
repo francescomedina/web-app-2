@@ -4,6 +4,7 @@ import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
 import it.polito.wa2.order.dto.OrderDTO
+import it.polito.wa2.order.dto.PartiallyOrderDTO
 import it.polito.wa2.order.services.OrderServiceImpl
 import org.bson.types.ObjectId
 import org.springframework.http.HttpStatus
@@ -98,6 +99,40 @@ class OrderController(
             val createdOrder = orderDTO.let { orderServiceImpl.createOrder(userInfoJWT, it) }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder)
+
+        } catch (error: ErrorResponse) {
+            // There was an error. Return an error message
+            throw ResponseStatusException(error.status, error.errorMessage)
+        }
+    }
+
+    /**
+     * PATCH /orders/{orderID}
+     * @param orderID: id of the order to update
+     * @param orderDTO:
+     * @return the order updated
+     */
+    @PatchMapping("/{orderID}")
+    suspend fun updatePartiallyOrder(
+        @PathVariable orderID: String,
+        @RequestBody @Valid orderDTO: PartiallyOrderDTO,
+        @RequestHeader(name = "Authorization") jwtToken: String
+    ) : ResponseEntity<Mono<OrderDTO>> {
+
+        try {
+            // Extract userInfo from JWT
+            val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
+
+            // If the user is not an admin, we will return an error
+//            if (!userInfoJWT.isAdmin()) {
+//                throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
+//            }
+
+            // Ask the service to create a new order
+            val updatedWarehouse = orderServiceImpl.updatePartiallyOrder(orderID,orderDTO)
+
+            // Return a 200 with inside the order information
+            return ResponseEntity.status(HttpStatus.CREATED).body(updatedWarehouse)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message

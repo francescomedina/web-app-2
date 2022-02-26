@@ -3,6 +3,7 @@ package it.polito.wa2.order.services
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.order.domain.DeliveryEntity
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.domain.ProductEntity
 import it.polito.wa2.order.dto.*
@@ -87,29 +88,56 @@ class OrderServiceImpl(
             .then()
     }
 
-    override suspend fun updateOrder(userInfoJWT: UserInfoJWT?, orderId: String, orderDTO: OrderDTO, username: String?, trusted: Boolean): Mono<OrderDTO> {
-        if (trusted || userInfoJWT!!.isAdmin()) {
-            val orderEntity = orderRepository.findById(orderId).onErrorMap {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
-            }.awaitSingleOrNull()
+    override suspend fun updatePartiallyOrder(orderId: String, orderDTO: PartiallyOrderDTO): Mono<OrderDTO> {
+        val orderEntity = orderRepository.findById(orderId).onErrorMap {
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
+        }.awaitSingleOrNull()
 
-            orderEntity?.let {
-                val prevStatus = orderEntity.status
-                orderEntity.status = orderDTO.status
-                orderRepository.save(it).onErrorMap { error ->
-                    throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
-                }.awaitSingle()
-                if(prevStatus != orderDTO.status){
-                    listOf(it.buyer, adminEmail).forEach { to ->
-                        mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
-                    }
-                }
-                return mono { it.toOrderDTO() }
+        var prods: List<ProductEntity> = emptyList()
+        if(orderDTO.products!=null) {
+            orderDTO.products!!.map {
+                ProductEntity(
+                    id = it.id,
+                    quantity = it.quantity,
+                    price = it.price
+                )
             }
-
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+        }else {
+            prods = orderEntity!!.products!!
         }
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "User not authenticated")
+        var delivery: List<DeliveryEntity> = emptyList()
+        if(orderDTO.delivery!=null) {
+            orderDTO.delivery!!.map {
+                DeliveryEntity(
+                    shippingAddress = it.shippingAddress,
+                    warehouseId = it.warehouseId,
+                    products = prods
+                )
+            }
+        }else {
+            delivery = orderEntity!!.delivery!!
+        }
+        val newOrder = OrderEntity(
+            id = orderEntity!!.id,
+            buyer = orderDTO.buyer ?: orderEntity.buyer,
+            status = orderDTO.status ?: orderEntity.status,
+            products = prods,
+            delivery = delivery
+        )
+
+        newOrder.let {
+            val prevStatus = orderEntity.status
+            orderEntity.status = orderDTO.status
+            orderRepository.save(it).onErrorMap { error ->
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
+            }.awaitSingle()
+            if(prevStatus != orderDTO.status){
+                listOf(it.buyer, adminEmail).forEach { to ->
+                    mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
+                }
+            }
+            return mono { it.toOrderDTO() }
+        }
     }
 
     /**

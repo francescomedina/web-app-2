@@ -4,6 +4,14 @@ import it.polito.wa2.order.domain.OrderEntity
 import org.bson.types.ObjectId
 import javax.validation.constraints.NotBlank
 
+data class PartiallyOrderDTO(
+    var id: ObjectId? = null,
+    var status: String? = "",
+    var buyer: String? = "",
+    var products: List<ProductDTO>? = emptyList(),
+    var delivery: List<DeliveryDTO>? = emptyList(),
+)
+
 data class OrderDTO(
     var id: ObjectId? = null,
     @field:NotBlank(message = "Status is required")

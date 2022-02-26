@@ -44,17 +44,42 @@ class ReactiveConsumerService(
                 val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
                 log.info("TYPE $type")
                 if(types.contains(type)){
-                    val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                    val order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
-                    log.info("ORDER $order")
+                    val order: OrderEntity
                     val status = when (type) {
-                        "QUANTITY_DECREMENTED" -> "ISSUED"
-                        "QUANTITY_UNAVAILABLE" -> "FAILED-QUANTITY_UNAVAILABLE"
-                        "REFUND_TRANSACTION_SUCCESS" -> "CANCELED"
-                        "CREDIT_UNAVAILABLE" -> "FAILED-CREDIT_UNAVAILABLE"
-                        "TRANSACTION_ERROR" -> "FAILED-TRANSACTION_ERROR"
-                        "REFUND_TRANSACTION_ERROR" -> "FAILED-REFUND_TRANSACTION_ERROR"
-                        else -> ""
+                        "QUANTITY_DECREMENTED" -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            "ISSUED"
+                        }
+                        "QUANTITY_UNAVAILABLE_NOT_PURCHASED" -> {
+                            order = gson.fromJson(it.value(), OrderEntity::class.java)
+                            "FAILED-QUANTITY_UNAVAILABLE"
+                        }
+                        "REFUND_TRANSACTION_SUCCESS" -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            "CANCELED"
+                        }
+                        "CREDIT_UNAVAILABLE" -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            "FAILED-CREDIT_UNAVAILABLE"
+                        }
+                        "TRANSACTION_ERROR" -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            "FAILED-TRANSACTION_ERROR"
+                        }
+                        "REFUND_TRANSACTION_ERROR" -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            "FAILED-REFUND_TRANSACTION_ERROR"
+                        }
+                        else -> {
+                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            ""
+                        }
                     }
                     log.info("TYPE $type")
                     orderRepository.findById(order.id.toString())
