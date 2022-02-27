@@ -113,7 +113,8 @@ class ReactiveConsumerService(
                         senderWalletId = if(isRefund) bankId else it?.id,
                         receiverWalletId = if(isRefund) it?.id else bankId,
                         reason = if(isRefund) "Order Refund" else "Order Payment"
-                    ), true
+                    ), true,
+                    order
                 )
             }
             .doOnError {

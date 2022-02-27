@@ -1,6 +1,7 @@
 package it.polito.wa2.wallet.services
 
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
+import it.polito.wa2.wallet.OrderEntity
 import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.domain.WalletEntity
 import it.polito.wa2.wallet.dto.TransactionDTO
@@ -14,7 +15,7 @@ import java.util.*
 interface WalletService {
     fun createWallet(userInfoJWT: UserInfoJWT, username: String): Mono<WalletDTO>
     suspend fun getWalletById(userInfoJWT: UserInfoJWT, walletId: ObjectId): WalletDTO
-    fun createTransaction(userInfoJWT: UserInfoJWT?,transactionDTO: TransactionDTO, trusted: Boolean = false): Mono<TransactionDTO>
+    fun createTransaction(userInfoJWT: UserInfoJWT?,transactionDTO: TransactionDTO, trusted: Boolean = false, order: OrderEntity? = null): Mono<TransactionDTO>
 
     suspend fun getTransactionsByPeriod(userInfoJWT: UserInfoJWT, walletId: ObjectId, start: Instant, end: Instant): Flux<TransactionEntity?>
     suspend fun getTransactionByIdAndWalletId(userInfoJWT: UserInfoJWT, transactionId: ObjectId, walletId: ObjectId): TransactionDTO

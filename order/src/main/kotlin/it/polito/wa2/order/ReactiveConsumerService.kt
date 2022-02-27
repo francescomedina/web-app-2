@@ -23,8 +23,9 @@ class ReactiveConsumerService(
     val mailService: MailService,
 ) : CommandLineRunner {
 
+    private val adminEmail = "marco.lg1997@gmail.com"
     var log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
-    private val types = listOf("QUANTITY_DECREMENTED","QUANTITY_UNAVAILABLE","REFUND_TRANSACTION_SUCCESS", "CREDIT_UNAVAILABLE", "TRANSACTION_ERROR")
+    private val types = listOf("QUANTITY_DECREMENTED","REFUND_TRANSACTION_SUCCESS", "CREDIT_UNAVAILABLE", "TRANSACTION_ERROR","QUANTITY_UNAVAILABLE_NOT_PURCHASED")
 
     @Transactional
     fun orderConsumer(): Flux<ConsumerRecord<String, String>> {
@@ -45,14 +46,16 @@ class ReactiveConsumerService(
                 log.info("TYPE $type")
                 if(types.contains(type)){
                     val order: OrderEntity
-                    val status = when (type) {
+                    var status = when (type) {
                         "QUANTITY_DECREMENTED" -> {
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
                             "ISSUED"
                         }
                         "QUANTITY_UNAVAILABLE_NOT_PURCHASED" -> {
+                            log.info("TYPE ${it.value()}")
                             order = gson.fromJson(it.value(), OrderEntity::class.java)
+                            log.info("TYPE $order")
                             "FAILED-QUANTITY_UNAVAILABLE"
                         }
                         "REFUND_TRANSACTION_SUCCESS" -> {
@@ -61,8 +64,9 @@ class ReactiveConsumerService(
                             "CANCELED"
                         }
                         "CREDIT_UNAVAILABLE" -> {
-                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+//                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+//                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            order = gson.fromJson(it.value(), OrderEntity::class.java)
                             "FAILED-CREDIT_UNAVAILABLE"
                         }
                         "TRANSACTION_ERROR" -> {
@@ -97,9 +101,10 @@ class ReactiveConsumerService(
                         }
                         .flatMap(orderRepository::save)
                         .doOnNext {
-                            o -> if(status == "ISSUED"){
-                                mailService.sendMessage(o.buyer!!, "Order ${o.id.toString()} ISSUED", "Order ${o.id.toString()} was successfully ISSUED. User ${o.buyer.toString()}")
-                            }
+                            o ->
+                                listOf(o.buyer, adminEmail).forEach { to ->
+                                    mailService.sendMessage(to.toString(), "Order ${o.id.toString()} $status", "Order ${o.id.toString()} has status $status. User ${o.buyer.toString()}")
+                                }
                         }
                         .map { o -> o.toOrderDTO() }
                         .subscribe()

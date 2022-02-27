@@ -31,7 +31,7 @@ class OrderServiceImpl(
 ) : OrderService {
 
     private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
-    private val adminEmail = "admin@test.com"
+    private val adminEmail = "marco.lg1997@gmail.com"
 
     /**
      * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
@@ -81,6 +81,9 @@ class OrderServiceImpl(
                     throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
                 }
                 saveOrder(it,true).subscribe()
+                listOf(it.buyer, adminEmail).forEach { to ->
+                    mailService.sendMessage(to.toString(), "Order ${it.id.toString()} CANCELED", "Order ${it.id.toString()} was CANCELED. User ${it.buyer.toString()}")
+                }
             }
             .onErrorMap {
                 throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
@@ -89,13 +92,12 @@ class OrderServiceImpl(
     }
 
     override suspend fun updatePartiallyOrder(orderId: String, orderDTO: PartiallyOrderDTO): Mono<OrderDTO> {
-        val orderEntity = orderRepository.findById(orderId).onErrorMap {
+        val orderEntity = orderRepository.findById(orderId).awaitSingleOrNull()?:
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
-        }.awaitSingleOrNull()
 
         var prods: List<ProductEntity> = emptyList()
         if(orderDTO.products!=null) {
-            orderDTO.products!!.map {
+            prods = orderDTO.products!!.map {
                 ProductEntity(
                     id = it.id,
                     quantity = it.quantity,
@@ -107,7 +109,7 @@ class OrderServiceImpl(
         }
         var delivery: List<DeliveryEntity> = emptyList()
         if(orderDTO.delivery!=null) {
-            orderDTO.delivery!!.map {
+            delivery = orderDTO.delivery!!.map {
                 DeliveryEntity(
                     shippingAddress = it.shippingAddress,
                     warehouseId = it.warehouseId,
@@ -125,19 +127,14 @@ class OrderServiceImpl(
             delivery = delivery
         )
 
-        newOrder.let {
-            val prevStatus = orderEntity.status
-            orderEntity.status = orderDTO.status
-            orderRepository.save(it).onErrorMap { error ->
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, error.message ?: "Generic error")
-            }.awaitSingle()
-            if(prevStatus != orderDTO.status){
-                listOf(it.buyer, adminEmail).forEach { to ->
-                    mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
-                }
+        val prevStatus = orderEntity.status
+        orderEntity.status = orderDTO.status
+        if(prevStatus != orderDTO.status){
+            listOf(newOrder.buyer, adminEmail).forEach { to ->
+                mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
             }
-            return mono { it.toOrderDTO() }
         }
+        return orderRepository.save(newOrder).map { it.toOrderDTO() }
     }
 
     /**

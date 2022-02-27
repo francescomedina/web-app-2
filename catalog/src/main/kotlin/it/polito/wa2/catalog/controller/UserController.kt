@@ -143,38 +143,42 @@ class UserController(
     @PostMapping("/login")
     suspend fun login(@RequestBody login: Login): Jwt {
 
-        // Search if there is a user with the given name
-        val user = userDetailsServiceImpl.getUserByUsername(login.username)
-
-        user?.let {
-            // If the user is not null, we will check if the password provided is the same of the password stored
-            if (encoder.matches(login.password, it.password)) {
-                // The password is valid, now we check if the user has some limitation that do not allow him to enter
-                if (it.userCanAccess()) {
-                    // The user has all valid, so we generate the token
-                    return Jwt(jwtUtils.generateJwtToken(it))
-                } else {
-                    // The user cannot log in due to some limitation in his account, we return an error explaining the problem
-                    val errorMessage = when {
-                        !it.isEnabled -> {
-                            // The user inserted a valid email and password, so we know its identity for sure
-                            // We send again another email to confirm the account because we suppose the link is expired
-                            userDetailsServiceImpl.sendToken(user)
-                            "Your account is not enabled. We are sending you another email to confirm"
+        try{
+            // Search if there is a user with the given name
+            val user = userDetailsServiceImpl.getUserByUsername(login.username)
+            user?.let {
+                // If the user is not null, we will check if the password provided is the same of the password stored
+                if (encoder.matches(login.password, it.password)) {
+                    // The password is valid, now we check if the user has some limitation that do not allow him to enter
+                    if (it.userCanAccess()) {
+                        // The user has all valid, so we generate the token
+                        return Jwt(jwtUtils.generateJwtToken(it))
+                    } else {
+                        // The user cannot log in due to some limitation in his account, we return an error explaining the problem
+                        val errorMessage = when {
+                            !it.isEnabled -> {
+                                // The user inserted a valid email and password, so we know its identity for sure
+                                // We send again another email to confirm the account because we suppose the link is expired
+                                userDetailsServiceImpl.sendToken(user)
+                                "Your account is not enabled. We are sending you another email to confirm"
+                            }
+                            !it.isAccountNonLocked -> "Your account is locked, contact the support center"
+                            !it.isAccountNonExpired -> "Your account expired, contact the support center"
+                            !it.isCredentialsNonExpired -> "Your credential is expired, change the password"
+                            else -> "Your account has some unknown problem, contact the support center"
                         }
-                        !it.isAccountNonLocked -> "Your account is locked, contact the support center"
-                        !it.isAccountNonExpired -> "Your account expired, contact the support center"
-                        !it.isCredentialsNonExpired -> "Your credential is expired, change the password"
-                        else -> "Your account has some unknown problem, contact the support center"
+
+                        throw ResponseStatusException(
+                            HttpStatus.UNAUTHORIZED,
+                            errorMessage
+                        )
+
                     }
-
-                    throw ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        errorMessage
-                    )
-
                 }
             }
+
+        }catch (error: ErrorResponse) {
+            throw ResponseStatusException(error.status, error.errorMessage)
         }
 
         // If the password is not correct, or we do not find any user with that username,

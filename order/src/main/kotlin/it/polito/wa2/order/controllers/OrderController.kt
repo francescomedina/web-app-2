@@ -129,14 +129,16 @@ class OrderController(
 //            }
 
             // Ask the service to create a new order
-            val updatedWarehouse = orderServiceImpl.updatePartiallyOrder(orderID,orderDTO)
+            val updatedOrder = orderServiceImpl.updatePartiallyOrder(orderID,orderDTO)
 
             // Return a 200 with inside the order information
-            return ResponseEntity.status(HttpStatus.CREATED).body(updatedWarehouse)
+            return ResponseEntity.status(HttpStatus.CREATED).body(updatedOrder)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
             throw ResponseStatusException(error.status, error.errorMessage)
+        }catch (e: Exception){
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST,e.message)
         }
     }
 

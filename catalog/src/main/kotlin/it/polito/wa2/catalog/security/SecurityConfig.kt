@@ -60,11 +60,11 @@ class SecurityConfig {
 
 //            .pathMatchers(HttpMethod.PATCH, "/order-composite/**").hasAuthority(Rolename.ADMIN.toString()) // User can CANCEL (delete) an order but can not modify products and other attributes
 //            .pathMatchers("/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-            .pathMatchers(HttpMethod.PATCH,"/order-composite/**").permitAll()
-//            .pathMatchers(HttpMethod.POST, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-//            .pathMatchers(HttpMethod.PATCH, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-//            .pathMatchers(HttpMethod.DELETE, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-//            .pathMatchers(HttpMethod.GET, "/order-composite/**").permitAll()
+//            .pathMatchers(HttpMethod.PATCH,"/order-composite/**").permitAll()
+            .pathMatchers(HttpMethod.POST, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
+            .pathMatchers(HttpMethod.PATCH, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
+            .pathMatchers(HttpMethod.DELETE, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
+            .pathMatchers(HttpMethod.GET, "/order-composite/**").permitAll()
 
             .pathMatchers(HttpMethod.POST, "/products-composite/addRating/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())

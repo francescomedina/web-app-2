@@ -3,6 +3,9 @@ package it.polito.wa2.wallet.services
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.AppRuntimeException
 import it.polito.wa2.api.exceptions.ErrorResponse
+import it.polito.wa2.util.gson.GsonUtils
+import it.polito.wa2.wallet.OrderEntity
+import it.polito.wa2.wallet.ReactiveProducerService
 import it.polito.wa2.wallet.repositories.WalletRepository
 import it.polito.wa2.wallet.domain.TransactionEntity
 import it.polito.wa2.wallet.domain.WalletEntity
@@ -13,6 +16,8 @@ import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.TransactionRepository
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.header.internals.RecordHeader
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -28,6 +33,7 @@ import java.time.Instant
 class WalletServiceImpl(
     val walletRepository: WalletRepository,
     val transactionRepository: TransactionRepository,
+    val reactiveProducerService: ReactiveProducerService,
     val eventPublisher: OutboxEventPublisher
 ) : WalletService {
 
@@ -82,7 +88,7 @@ class WalletServiceImpl(
      * @return the new transaction created
      */
     @Transactional // Since we update multiple documents we annotated with transactional
-    override fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean): Mono<TransactionDTO> {
+    override fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean, order: OrderEntity?): Mono<TransactionDTO> {
         // Check if the senderWalletId and the receiverWalletId are the same
         logger.info("RICEVENTE: ${transactionDTO.receiverWalletId}")
         logger.info("RICEVENTE: ${transactionDTO.receiverWalletId.toString()}")
@@ -100,46 +106,63 @@ class WalletServiceImpl(
         return Mono.just(transactionDTO.senderWalletId.toString())
             .flatMap(walletRepository::findById)
             .doOnNext {
+                logger.info("CI PASSA DA QUI 0")
                 if (it == null) {
+                    logger.info("CI PASSA DA QUI A")
                     throw AppRuntimeException("Sender wallet not found",HttpStatus.BAD_REQUEST,null)
                 }
                 if (it.amount < transactionDTO.amount.abs()) {
+                    logger.info("CI PASSA DA QUI B")
+                    if(trusted){
+                        reactiveProducerService.send(
+                            ProducerRecord("wallet.topic", null, order?.id.toString(), GsonUtils.gson.toJson(order),listOf(
+                                RecordHeader("type", "CREDIT_UNAVAILABLE".toByteArray())
+                            ))
+                        )
+                    }
                     throw AppRuntimeException("Sender has not enough money to compute the transaction",HttpStatus.BAD_REQUEST,null)
                 }
                 if (!trusted && userInfoJWT!=null && it.customerUsername != userInfoJWT.username) {
+                    logger.info("CI PASSA DA QUI C $trusted $userInfoJWT ${it.customerUsername} ${userInfoJWT.username}")
                     throw AppRuntimeException("Only the wallet owner can create transaction",HttpStatus.BAD_REQUEST,null)
                 }
                 it.amount -= transactionDTO.amount.abs()
+                logger.info("AMOUNT BANCA: ${it.amount}")
             }
             .flatMap(walletRepository::save)
             .doOnNext {
+                logger.info("CI PASSA DA QUI 1")
                 if (it == null) {
                     throw AppRuntimeException("Sender wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null)
                 }
             }
             .flatMap { senderWallet ->
+                logger.info("CI PASSA DA QUI 2")
                 walletRepository.findById(transactionDTO.receiverWalletId.toString())
                     .doOnNext { receiverWallet ->
                         if (receiverWallet == null) {
                             throw AppRuntimeException("Receiver wallet not found",HttpStatus.BAD_REQUEST,null)
                         }
                         receiverWallet.amount += transactionDTO.amount.abs()
-                        walletRepository.save(receiverWallet)
+                        val w = walletRepository.save(receiverWallet)
                             .onErrorResume { throw AppRuntimeException("Receiver wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
                             .subscribe()
+                        logger.info("CI PASSA DA QUI 3 ${w}")
                     }
                     .flatMap {
-                        transactionRepository.save(TransactionEntity(
+                        val t = transactionRepository.save(TransactionEntity(
                             amount = transactionDTO.amount,
                             time = Instant.now(),
                             senderWalletId = senderWallet.id!!,
                             receiverWalletId = it.id!!,
                             reason = transactionDTO.reason
                         ))
+                        logger.info("CI PASSA DA QUI 3 ${t}")
+                        t
                     }
-                    .onErrorResume { throw AppRuntimeException("Transaction not persisted",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+                    .onErrorResume { e -> throw AppRuntimeException("Transaction not persisted",HttpStatus.INTERNAL_SERVER_ERROR,e) }
             }
-            .onErrorResume { throw AppRuntimeException("Transaction error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
+            .onErrorResume { e -> throw AppRuntimeException(e.message,HttpStatus.BAD_REQUEST,e) }
             .map {
                 it.toTransactionDTO()
             }
