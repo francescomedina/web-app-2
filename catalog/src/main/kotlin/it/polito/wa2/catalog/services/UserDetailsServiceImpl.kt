@@ -72,9 +72,9 @@ class UserDetailsServiceImpl(
                         HttpStatus.CONFLICT,
                         "email already exist"
                     )
-                    error.message.toString().contains("username dup key") -> ErrorResponse(
+                    error.message.toString().contains("_username_ dup key") -> ErrorResponse(
                         HttpStatus.CONFLICT,
-                        "username already exist"
+                        "email already exist"
                     )
                     else -> ErrorResponse(HttpStatus.BAD_REQUEST, error.message.toString())
                 }
@@ -111,7 +111,7 @@ class UserDetailsServiceImpl(
 
         username?.let {
 
-            val user = userRepository.findByUsername(it).block() //TODO: Why not awaitsingleornull?
+            val user = userRepository.findByUsername(it).block()
             user?.let {
                 return user.toUserDetailsDTO()
             }
