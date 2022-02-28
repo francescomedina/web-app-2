@@ -162,7 +162,7 @@ class OrderServiceImpl(
         val newOrder = OrderEntity(
             id = orderEntity.id,
             buyer = orderDTO.buyer ?: orderEntity.buyer,
-            status = orderEntity.status, //TODO: Non è aggiornato orderDTO.status ?: orderEntity.status
+            status = orderDTO.status ?: orderEntity.status,
             products = prods,
             delivery = delivery
         )

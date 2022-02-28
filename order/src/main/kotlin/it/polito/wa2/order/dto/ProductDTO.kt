@@ -14,7 +14,7 @@ data class ProductDTO(
     var price: BigDecimal? = null
 )
 
-fun ProductEntity.toOrderDTO(): ProductDTO {
+fun ProductEntity.toProductDTO(): ProductDTO {
     return ProductDTO(
         id = id,
         quantity = quantity,

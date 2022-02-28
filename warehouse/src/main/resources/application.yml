@@ -37,6 +37,16 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: progettomalnati@gmail.com
+    password: progetto2021
+    properties:
+      mail:
+        smtp.auth: true
+        smtp.starttls.enable: true
+        debug: false
 
 topics:
   in: order.topic

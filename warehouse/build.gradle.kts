@@ -41,7 +41,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-sleuth:3.0.3")
     implementation("com.google.code.gson:gson:2.8.5")
 
-
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 

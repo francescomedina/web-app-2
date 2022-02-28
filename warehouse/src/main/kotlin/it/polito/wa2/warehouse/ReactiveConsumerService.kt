@@ -5,6 +5,7 @@ import it.polito.wa2.util.gson.GsonUtils.Companion.gson
 import it.polito.wa2.warehouse.domain.ProductAvailabilityEntity
 import it.polito.wa2.warehouse.outbox.OutboxEventPublisher
 import it.polito.wa2.warehouse.repository.ProductAvailabilityRepository
+import it.polito.wa2.warehouse.services.MailService
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
@@ -60,8 +61,10 @@ class ReactiveConsumerService(
     val reactiveProducerService: ReactiveProducerService,
     val productAvailabilityRepository: ProductAvailabilityRepository,
     val eventPublisher: OutboxEventPublisher,
+    val mailService: MailService,
 ) : CommandLineRunner {
 
+    private val adminEmail = "pacimedina@gmail.com"
     private val log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
 
     fun checkAvailability(order: OrderEntity): Mono<MutableList<ProductAvailabilityEntity?>> {
@@ -285,6 +288,15 @@ class ReactiveConsumerService(
                         }
                 }
                 .flatMap { productAvailabilityRepository.save(it!!) }
+                .doOnNext {
+                    if(it.quantity < it.min_quantity){
+                        mailService.sendMessage(
+                            adminEmail,
+                            "ALERT - Product ${it.productId}",
+                            "The product ${it.productId} quantity is below the minimum threshold (${it.min_quantity}).<b> WarehouseID: ${it.warehouseId}"
+                        )
+                    }
+                }
                 .doOnError { throw RuntimeException("Error on productAvailability") }
                 .doOnComplete { // Si applica alla fine di tutti i flussi, in questo caso dopo aver iterato tutti i prodotti
                     val tmp = mutableListOf<DeliveryEntity>()

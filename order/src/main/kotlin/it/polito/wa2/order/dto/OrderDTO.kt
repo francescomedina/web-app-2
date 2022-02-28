@@ -28,7 +28,7 @@ fun OrderEntity.toOrderDTO(): OrderDTO {
         id = id,
         status = status,
         buyer = buyer,
-        products = products?.map { it.toOrderDTO() }?.toList(),
-        delivery = delivery?.map { it.toOrderDTO() }?.toList()
+        products = products?.map { it.toProductDTO() }?.toList(),
+        delivery = delivery?.map { it.toDeliveryDTO() }?.toList()
     )
 }

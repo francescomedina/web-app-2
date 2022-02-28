@@ -9,10 +9,10 @@ data class DeliveryDTO(
     var products: List<ProductDTO>
 )
 
-fun DeliveryEntity.toOrderDTO(): DeliveryDTO {
+fun DeliveryEntity.toDeliveryDTO(): DeliveryDTO {
     return DeliveryDTO(
         shippingAddress = shippingAddress,
         warehouseId = warehouseId,
-        products = products.map { it.toOrderDTO() }.toList()
+        products = products.map { it.toProductDTO() }.toList()
     )
 }
