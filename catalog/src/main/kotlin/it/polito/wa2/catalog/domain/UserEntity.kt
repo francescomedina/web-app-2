@@ -13,7 +13,7 @@ data class UserEntity(
     @Id
     val id: ObjectId = ObjectId.get(),
 
-    @Indexed(unique = true)
+    @Indexed(unique = true, name = "_username_")
     val username: String,
     var password: String = "",
 
@@ -33,7 +33,7 @@ data class UserEntity(
 
     fun getRolenames(): Set<Rolename> {
         if (roles == "")
-            return setOf<Rolename>()
+            return setOf()
         return roles.split(", ").map {
             Rolename.valueOf(it)
         }.toSet()

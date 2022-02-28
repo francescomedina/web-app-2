@@ -1,7 +1,5 @@
 package it.polito.wa2.catalog.security
 
-import it.polito.wa2.catalog.services.UserDetailsServiceImpl
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
 import org.springframework.http.HttpHeaders
 import org.springframework.security.authentication.ReactiveAuthenticationManager
@@ -9,10 +7,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.ReactiveUserDetailsService
-import org.springframework.security.core.userdetails.UserDetailsService
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.security.web.server.authentication.ServerAuthenticationConverter
 import org.springframework.stereotype.Component
 import org.springframework.web.server.ServerWebExchange
@@ -60,7 +54,6 @@ class JwtAuthenticationManager(
             // fetched from the JWT, while leaving the password to null
             val authentication = UsernamePasswordAuthenticationToken(userDetailsDTO, null, userDetailsDTO.authorities)
 
-            // TODO: Missing this but i think don't need with Spring Reactive
             // Add extra details coming from the request
             //authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
             //Set the Authentication object in the SecurityContext

@@ -2,7 +2,6 @@ package it.polito.wa2.catalog.dto
 
 import javax.validation.constraints.Email
 import javax.validation.constraints.NotBlank
-import javax.validation.constraints.NotNull
 
 data class RegistrationBody(
     @field:Email(message = "Email is not valid")

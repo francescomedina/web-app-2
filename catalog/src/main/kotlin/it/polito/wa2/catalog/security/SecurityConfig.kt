@@ -8,10 +8,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder
 import org.springframework.security.config.web.server.ServerHttpSecurity
-import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.factory.PasswordEncoderFactories
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -58,13 +54,10 @@ class SecurityConfig {
 
             .pathMatchers("/auth/**").permitAll()
 
-//            .pathMatchers(HttpMethod.PATCH, "/order-composite/**").hasAuthority(Rolename.ADMIN.toString()) // User can CANCEL (delete) an order but can not modify products and other attributes
-//            .pathMatchers("/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-//            .pathMatchers(HttpMethod.PATCH,"/order-composite/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
             .pathMatchers(HttpMethod.PATCH, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
             .pathMatchers(HttpMethod.DELETE, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
-            .pathMatchers(HttpMethod.GET, "/order-composite/**").permitAll()
+            .pathMatchers(HttpMethod.GET, "/order-composite/**").hasAuthority(Rolename.CUSTOMER.toString())
 
             .pathMatchers(HttpMethod.POST, "/products-composite/addRating/**").permitAll()
             .pathMatchers(HttpMethod.POST, "/products-composite/**").hasAuthority(Rolename.ADMIN.toString())

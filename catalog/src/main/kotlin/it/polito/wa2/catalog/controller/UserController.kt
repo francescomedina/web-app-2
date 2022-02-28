@@ -1,6 +1,5 @@
 package it.polito.wa2.catalog.controller
 
-
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.catalog.dto.RegistrationBody
 import it.polito.wa2.catalog.dto.UserDetailsDTO
@@ -13,7 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import java.lang.ClassCastException
 import java.security.Principal
 import javax.validation.Valid
 import javax.validation.constraints.NotBlank
@@ -30,8 +28,9 @@ class UserController(
 
     /**
      * Controller that handle the registration process
-     * It will check if the password and confirmPassword are the same and then delegate the creation to the service above
-     * @return the user created or a bad request if some errors occurred
+     * @param data : RegistrationBody with inside the user information
+     * It will check if the 'password' and 'confirmPassword' are the same and then delegate the creation to the service above
+     * @return the user created or a 'bad request' if some errors occurred
      */
     @PostMapping("/register")
     suspend fun register(@RequestBody @Valid data: RegistrationBody): ResponseEntity<UserDetailsDTO> {
@@ -43,7 +42,7 @@ class UserController(
                 _username = data.username,
                 _password = encoder.encode(data.password),
                 _roles = setOf(Rolename.CUSTOMER),
-                isEnable = false,
+                isEnable = false,   // It needs to confirm the email in order to be enabled
                 name = data.name,
                 surname = data.surname,
                 address = data.address
@@ -108,6 +107,9 @@ class UserController(
         } catch (error: ErrorResponse) {
             // Some errors occurred, we return the errorMessage formatted inside updatePassword method
             throw ResponseStatusException(error.status, error.errorMessage)
+        }
+        catch (e: ResponseStatusException){
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, e.reason)
         }
         catch (e: Exception){
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "You are not authenticated")
@@ -251,7 +253,7 @@ class UserController(
 
     @GetMapping("/admin/{username}")
     suspend fun userInfo(@PathVariable username: String): UserDetailsDTO? {
-        return try {
+        try {
         // Only the admin can ask information about other users
         return userDetailsServiceImpl.getUserByUsername(username)
         } catch (error: ErrorResponse) {
@@ -278,7 +280,7 @@ data class EnableUser(
     @field:NotBlank(message = "Missing required field: username")
     val username: String = "",
     @field:NotNull(message = "Missing required field: enable")
-    val enable: Boolean //TODO: pUT HERE Boolean? to enable not null
+    val enable: Boolean
 )
 
 data class ChangePasswordBody(
