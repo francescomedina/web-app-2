@@ -10,9 +10,7 @@ import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
-import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.mono
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -20,7 +18,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.*
+import reactor.core.scheduler.Schedulers
+import reactor.kotlin.core.publisher.switchIfEmpty
 
 @Service
 @Transactional
@@ -31,19 +30,21 @@ class OrderServiceImpl(
 ) : OrderService {
 
     private val adminEmail = "marco.lg1997@gmail.com"
+    private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
 
-    fun saveOrder(order: OrderEntity, toDelete: Boolean = false) : Mono<OrderDTO> {
+    fun saveOrder(order: OrderEntity, toDelete: Boolean = false): Mono<OrderDTO> {
         return Mono.just(order)
             .flatMap(orderRepository::save)
+            .publishOn(Schedulers.boundedElastic())
             .doOnNext {
                 eventPublisher.publish(
                     "order.topic",
                     it.id.toString(),
                     gson.toJson(it),
-                    if(toDelete) "ORDER_CANCELED" else "ORDER_CREATED"
+                    if (toDelete) "ORDER_CANCELED" else "ORDER_CREATED"
                 ).subscribe()
             }
-            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
+            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR, it)) }
             .map { it.toOrderDTO() }
     }
 
@@ -61,41 +62,72 @@ class OrderServiceImpl(
                 buyer = userInfoJWT.username,
                 status = "ISSUING",
                 products = orderDTO.products?.map {
-                    ProductEntity(it.id,it.quantity,it.price)
+                    ProductEntity(it.id, it.quantity, it.price)
                 }?.toList()
             )
             return saveOrder(order)
         }
 
-       return Mono.error(ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person"))
+        return Mono.error(ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person"))
     }
 
     override fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {
         return orderRepository.findById(orderId.toString())
-            .doOnNext {
-                if (userInfoJWT.username != it?.buyer) {
+            .switchIfEmpty {
+                // If it is empty means that we don't have an order with such orderId
+                logger.error("Asking to delete a non-existent order with id $orderId.")
+                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+            }
+            .doOnNext { it ->
+                // The order exists, let's see if it can be eliminated
+
+                if (!userInfoJWT.isAdmin() && userInfoJWT.username != it?.buyer) {
+                    // The order is not made by that user and the user is not an admin
+                    logger.error("Asking to delete an order that is not the logged in user. OrderId: $orderId is made by ${it.buyer} and ${userInfoJWT.username} ask to eliminate.")
                     throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't cancel orders for another person")
                 }
-                if(it.status != "ISSUED"){
-                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can cancel an order only if its status is ISSUED")
+
+                if (it.status != "ISSUED") {
+                    // If the status is not ISSUED it cannot be eliminated anymore
+                    logger.error("Asking to delete an order with orderId $orderId and status ${it.status}.")
+                    throw ErrorResponse(
+                        HttpStatus.BAD_REQUEST,
+                        "You can cancel an order only if its status is ISSUED. That order is with status ${it.status}"
+                    )
                 }
-                saveOrder(it,true).subscribe()
-                listOf(it.buyer, adminEmail).forEach { to ->
-                    mailService.sendMessage(to.toString(), "Order ${it.id.toString()} CANCELED", "Order ${it.id.toString()} was CANCELED. User ${it.buyer.toString()}")
-                }
-            }
-            .onErrorMap {
-                throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order does not exist")
+
+                // Now we can modify the order. That will trigger 2 events:
+                // 1. All the products inside the order are returned inside the warehouse
+                // 2. The user is refunded
+
+                saveOrder(it, true).doOnError { e ->
+                    logger.error("Error during saveOrder on deleteOrder function. Error type: $e")
+                    throw ErrorResponse(HttpStatus.BAD_REQUEST, "Error during returning item")
+                }.doOnNext {
+
+                    // We will email the buyer and to the admin saying that the item is cancelled
+                    listOf(it.buyer, adminEmail).forEach { to ->
+                        mailService.sendMessage(
+                            to.toString(),
+                            "Order ${it.id} CANCELED",
+                            "Order ${it.id} was CANCELED by the User ${it.buyer}"
+                        )
+                    }
+                    logger.info("DELETE ORDER COMPLETED. EMAIL SENT")
+                }.subscribe()
+
             }
             .then()
     }
 
     override suspend fun updatePartiallyOrder(orderId: String, orderDTO: PartiallyOrderDTO): Mono<OrderDTO> {
-        val orderEntity = orderRepository.findById(orderId).awaitSingleOrNull()?:
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
+        val orderEntity = orderRepository.findById(orderId).awaitSingleOrNull() ?: throw ErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            "Order not found"
+        )
 
         var prods: List<ProductEntity> = emptyList()
-        if(orderDTO.products!=null) {
+        if (orderDTO.products != null) {
             prods = orderDTO.products!!.map {
                 ProductEntity(
                     id = it.id,
@@ -103,11 +135,11 @@ class OrderServiceImpl(
                     price = it.price
                 )
             }
-        }else {
+        } else {
             prods = orderEntity!!.products!!
         }
         var delivery: List<DeliveryEntity> = emptyList()
-        if(orderDTO.delivery!=null) {
+        if (orderDTO.delivery != null) {
             delivery = orderDTO.delivery!!.map {
                 DeliveryEntity(
                     shippingAddress = it.shippingAddress,
@@ -115,7 +147,7 @@ class OrderServiceImpl(
                     products = prods
                 )
             }
-        }else {
+        } else {
             delivery = orderEntity!!.delivery!!
         }
         val newOrder = OrderEntity(
@@ -128,9 +160,13 @@ class OrderServiceImpl(
 
         val prevStatus = orderEntity.status
         orderEntity.status = orderDTO.status
-        if(prevStatus != orderDTO.status){
+        if (prevStatus != orderDTO.status) {
             listOf(newOrder.buyer, adminEmail).forEach { to ->
-                mailService.sendMessage(to.toString(), "Order ${orderDTO.id.toString()} ${orderDTO.status}", "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}")
+                mailService.sendMessage(
+                    to.toString(),
+                    "Order ${orderDTO.id.toString()} ${orderDTO.status}",
+                    "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}"
+                )
             }
         }
         return orderRepository.save(newOrder).map { it.toOrderDTO() }

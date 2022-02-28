@@ -23,7 +23,7 @@ class OrderController(
     val orderServiceImpl: OrderServiceImpl,
     val jwtUtils: JwtValidateUtils
 ) {
-    private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
+    private val logger = LoggerFactory.getLogger(OrderController::class.java)
     /**
      * GET /orders
      * Retrieve the list of all orders of the logged-in user
@@ -159,7 +159,10 @@ class OrderController(
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
             // Ask the service to delete that orderID. Throw an exception if the user can't access to such information
-            val response = orderServiceImpl.deleteOrder(userInfoJWT, orderId)
+            val response = orderServiceImpl.deleteOrder(userInfoJWT, orderId).onErrorMap {
+                logger.error("ERROR FUNCTION ${object{}.javaClass.enclosingMethod.name}: \n$it")
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, it.message)
+            }
 
             // Return a 200 with inside the order requested
             return ResponseEntity.status(HttpStatus.OK).body(response)

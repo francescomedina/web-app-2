@@ -25,7 +25,13 @@ class ReactiveConsumerService(
 
     private val adminEmail = "marco.lg1997@gmail.com"
     var log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
-    private val types = listOf("QUANTITY_DECREMENTED","REFUND_TRANSACTION_SUCCESS", "CREDIT_UNAVAILABLE", "TRANSACTION_ERROR","QUANTITY_UNAVAILABLE_NOT_PURCHASED")
+    private val types = listOf(
+        "QUANTITY_DECREMENTED",
+        "REFUND_TRANSACTION_SUCCESS",
+        "CREDIT_UNAVAILABLE",
+        "TRANSACTION_ERROR",
+        "QUANTITY_UNAVAILABLE_NOT_PURCHASED"
+    )
 
     @Transactional
     fun orderConsumer(): Flux<ConsumerRecord<String, String>> {
@@ -42,9 +48,10 @@ class ReactiveConsumerService(
                 )
             }
             .doOnNext {
-                val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
+                val type = String(it.headers().reduce { _, header -> if (header.key() == "type") header else null }
+                    ?.value() as ByteArray)
                 log.info("TYPE $type")
-                if(types.contains(type)){
+                if (types.contains(type)) {
                     val order: OrderEntity
                     var status = when (type) {
                         "QUANTITY_DECREMENTED" -> {
@@ -88,23 +95,26 @@ class ReactiveConsumerService(
                     log.info("TYPE $type")
                     orderRepository.findById(order.id.toString())
                         .onErrorResume { e ->
-                            throw AppRuntimeException("Update order error", HttpStatus.INTERNAL_SERVER_ERROR,e)
+                            throw AppRuntimeException("Update order error", HttpStatus.INTERNAL_SERVER_ERROR, e)
                         }
                         .doOnNext { o ->
-                            if(o==null){
-                                throw AppRuntimeException("Order not found", HttpStatus.BAD_REQUEST,o)
+                            if (o == null) {
+                                throw AppRuntimeException("Order not found", HttpStatus.BAD_REQUEST, o)
                             }
                             o.status = status
-                            if(!order.delivery.isNullOrEmpty()){
+                            if (!order.delivery.isNullOrEmpty()) {
                                 o.delivery = order.delivery
                             }
                         }
                         .flatMap(orderRepository::save)
-                        .doOnNext {
-                            o ->
-                                listOf(o.buyer, adminEmail).forEach { to ->
-                                    mailService.sendMessage(to.toString(), "Order ${o.id.toString()} $status", "Order ${o.id.toString()} has status $status. User ${o.buyer.toString()}")
-                                }
+                        .doOnNext { o ->
+                            listOf(o.buyer, adminEmail).forEach { to ->
+                                mailService.sendMessage(
+                                    to.toString(),
+                                    "Order ${o.id.toString()} $status",
+                                    "Order ${o.id.toString()} has status $status. User ${o.buyer.toString()}"
+                                )
+                            }
                         }
                         .map { o -> o.toOrderDTO() }
                         .subscribe()

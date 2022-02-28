@@ -46,7 +46,7 @@ spring:
       mail:
         smtp.auth: true
         smtp.starttls.enable: true
-        debug: true
+        debug: false
 
 topics:
   in: wallet.topic
