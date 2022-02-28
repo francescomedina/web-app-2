@@ -10,6 +10,7 @@ import it.polito.wa2.order.dto.*
 import it.polito.wa2.order.outbox.OutboxEventPublisher
 import it.polito.wa2.order.repositories.OrderRepository
 import it.polito.wa2.util.gson.GsonUtils.Companion.gson
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
@@ -20,6 +21,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.switchIfEmpty
+import kotlin.math.log
 
 @Service
 @Transactional
@@ -120,15 +122,14 @@ class OrderServiceImpl(
             .then()
     }
 
-    override suspend fun updatePartiallyOrder(orderId: String, orderDTO: PartiallyOrderDTO): Mono<OrderDTO> {
-        val orderEntity = orderRepository.findById(orderId).awaitSingleOrNull() ?: throw ErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            "Order not found"
-        )
+    override suspend fun updatePartiallyOrder(orderId: String, orderDTO: PartiallyOrderDTO): OrderDTO {
+        // Check if the order exist
+        val orderEntity = orderRepository.findById(orderId).awaitSingleOrNull()
+            ?: throw ErrorResponse(HttpStatus.BAD_REQUEST, "Order not found")
 
-        var prods: List<ProductEntity> = emptyList()
-        if (orderDTO.products != null) {
-            prods = orderDTO.products!!.map {
+        // If the user specify the product we will update
+        val prods: List<ProductEntity> = if (orderDTO.products != null) {
+            orderDTO.products!!.map {
                 ProductEntity(
                     id = it.id,
                     quantity = it.quantity,
@@ -136,11 +137,14 @@ class OrderServiceImpl(
                 )
             }
         } else {
-            prods = orderEntity!!.products!!
+            orderEntity.products!!
         }
-        var delivery: List<DeliveryEntity> = emptyList()
-        if (orderDTO.delivery != null) {
-            delivery = orderDTO.delivery!!.map {
+
+        logger.info("new prods $prods")
+
+        // If the user specify the delivery we will update
+        val delivery: List<DeliveryEntity> = if (orderDTO.delivery!=null) {
+            orderDTO.delivery!!.map {
                 DeliveryEntity(
                     shippingAddress = it.shippingAddress,
                     warehouseId = it.warehouseId,
@@ -148,28 +152,44 @@ class OrderServiceImpl(
                 )
             }
         } else {
-            delivery = orderEntity!!.delivery!!
+            orderEntity.delivery!!
         }
+
+        logger.info("new delivery $delivery")
+
+        logger.info("ORDERDTO.STATUS ${orderDTO.status} ORDERENTITY ${orderEntity.status} ORDER DTO $orderDTO")
+
         val newOrder = OrderEntity(
-            id = orderEntity!!.id,
+            id = orderEntity.id,
             buyer = orderDTO.buyer ?: orderEntity.buyer,
-            status = orderDTO.status ?: orderEntity.status,
+            status = orderEntity.status, //TODO: Non è aggiornato orderDTO.status ?: orderEntity.status
             products = prods,
             delivery = delivery
         )
 
-        val prevStatus = orderEntity.status
-        orderEntity.status = orderDTO.status
-        if (prevStatus != orderDTO.status) {
+        logger.info("new order $newOrder")
+
+        val savedNewOrder = orderRepository.save(newOrder).onErrorMap { error ->
+            logger.error("Error during saving: $error")
+            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Error during saving: $error")
+        }.awaitSingle()
+
+        logger.info("DOPO SALVAREEEEE $savedNewOrder")
+
+        // Send email to the buyer only if the order status changes
+        if (orderEntity.status != newOrder.status) {
             listOf(newOrder.buyer, adminEmail).forEach { to ->
                 mailService.sendMessage(
                     to.toString(),
-                    "Order ${orderDTO.id.toString()} ${orderDTO.status}",
-                    "Order was successfully ${orderDTO.status}. User ${orderDTO.buyer}"
+                    "Order ${newOrder.id} ${newOrder.status}",
+                    "Order was successfully ${newOrder.status}. User ${newOrder.buyer}"
                 )
             }
         }
-        return orderRepository.save(newOrder).map { it.toOrderDTO() }
+
+        logger.info("DOPO EMAIL")
+
+        return savedNewOrder.toOrderDTO()
     }
 
     /**

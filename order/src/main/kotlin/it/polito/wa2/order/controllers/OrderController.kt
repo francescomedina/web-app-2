@@ -24,6 +24,7 @@ class OrderController(
     val jwtUtils: JwtValidateUtils
 ) {
     private val logger = LoggerFactory.getLogger(OrderController::class.java)
+
     /**
      * GET /orders
      * Retrieve the list of all orders of the logged-in user
@@ -120,7 +121,7 @@ class OrderController(
         @PathVariable orderID: String,
         @RequestBody @Valid orderDTO: PartiallyOrderDTO,
         @RequestHeader(name = "Authorization") jwtToken: String
-    ) : ResponseEntity<Mono<OrderDTO>> {
+    ) : ResponseEntity<OrderDTO> {
 
         try {
             // Extract userInfo from JWT

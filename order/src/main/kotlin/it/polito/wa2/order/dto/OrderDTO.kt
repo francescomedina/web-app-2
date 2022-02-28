@@ -5,11 +5,11 @@ import org.bson.types.ObjectId
 import javax.validation.constraints.NotBlank
 
 data class PartiallyOrderDTO(
-    var id: ObjectId? = null,
-    var status: String? = "",
-    var buyer: String? = "",
-    var products: List<ProductDTO>? = emptyList(),
-    var delivery: List<DeliveryDTO>? = emptyList(),
+
+    var status: String? = null,
+    var buyer: String? = null,
+    var products: List<ProductDTO>? = null,
+    var delivery: List<DeliveryDTO>? = null,
 )
 
 data class OrderDTO(

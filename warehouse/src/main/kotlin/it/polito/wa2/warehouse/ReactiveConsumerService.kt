@@ -62,7 +62,7 @@ class ReactiveConsumerService(
     val eventPublisher: OutboxEventPublisher,
 ) : CommandLineRunner {
 
-    var log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
+    private val log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
 
     fun checkAvailability(order: OrderEntity): Mono<MutableList<ProductAvailabilityEntity?>> {
         return Flux.fromIterable(order.products)

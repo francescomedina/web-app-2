@@ -1,6 +1,7 @@
 package it.polito.wa2.order
 
 import it.polito.wa2.api.exceptions.AppRuntimeException
+import it.polito.wa2.order.controllers.OrderController
 import it.polito.wa2.order.domain.OrderEntity
 import it.polito.wa2.order.dto.toOrderDTO
 import it.polito.wa2.order.repositories.OrderRepository
@@ -24,7 +25,9 @@ class ReactiveConsumerService(
 ) : CommandLineRunner {
 
     private val adminEmail = "marco.lg1997@gmail.com"
-    var log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
+
+    private val log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
+
     private val types = listOf(
         "QUANTITY_DECREMENTED",
         "REFUND_TRANSACTION_SUCCESS",
