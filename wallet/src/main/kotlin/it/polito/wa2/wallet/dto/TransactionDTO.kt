@@ -27,5 +27,5 @@ data class TransactionDTO(
 }
 
 fun TransactionEntity.toTransactionDTO() : TransactionDTO{
-   return TransactionDTO(id = id, amount = amount, time=time, senderWalletId=senderWalletId, receiverWalletId=receiverWalletId, reason=reason)
+   return TransactionDTO(amount = amount, time=time, senderWalletId=senderWalletId, receiverWalletId=receiverWalletId, reason=reason)
 }

@@ -116,6 +116,8 @@ class WalletController(
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
             throw ResponseStatusException(error.status, error.errorMessage)
+        } catch (e: Exception){
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, e.message)
         }
 
     }

@@ -8,12 +8,8 @@ import java.time.Instant
 import javax.validation.constraints.Min
 import javax.validation.constraints.NotBlank
 
-@Document(collection = "transactions")
 data class TransactionEntity(
-    @Id
-    val id: ObjectId = ObjectId.get(),
-
-    @Min(0) //Amount greater or equal to 0
+   @Min(0) //Amount greater or equal to 0
     var amount: BigDecimal,
 
     var time: Instant = Instant.now(),

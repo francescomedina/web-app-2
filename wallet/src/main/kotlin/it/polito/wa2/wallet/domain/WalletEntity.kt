@@ -18,7 +18,7 @@ data class WalletEntity (
     @Min(0) //Amount greater or equal to 0
     var amount: BigDecimal = BigDecimal(0),
 
-    var purchases : List<TransactionEntity> = mutableListOf(),
-    var recharges : List<TransactionEntity> = mutableListOf(),
+    var purchases : MutableList<TransactionEntity> = mutableListOf(),
+    var recharges : MutableList<TransactionEntity> = mutableListOf(),
 
 )

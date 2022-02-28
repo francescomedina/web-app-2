@@ -16,6 +16,7 @@ import it.polito.wa2.wallet.dto.toWalletDTO
 import it.polito.wa2.wallet.outbox.OutboxEventPublisher
 import it.polito.wa2.wallet.repositories.TransactionRepository
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
 import org.bson.types.ObjectId
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.switchIfEmpty
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -88,151 +90,192 @@ class WalletServiceImpl(
      * @return the new transaction created
      */
     @Transactional // Since we update multiple documents we annotated with transactional
-    override fun createTransaction(userInfoJWT: UserInfoJWT?, transactionDTO: TransactionDTO, trusted: Boolean, order: OrderEntity?): Mono<TransactionDTO> {
+    override fun createTransaction(
+        userInfoJWT: UserInfoJWT?,
+        transactionDTO: TransactionDTO,
+        trusted: Boolean,
+        order: OrderEntity?
+    ): Mono<TransactionDTO> {
         // Check if the senderWalletId and the receiverWalletId are the same
-        logger.info("RICEVENTE: ${transactionDTO.receiverWalletId}")
-        logger.info("RICEVENTE: ${transactionDTO.receiverWalletId.toString()}")
         if (transactionDTO.senderWalletId.toString() == transactionDTO.receiverWalletId.toString()) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "The transaction has the same sender and receiver walletId")
         }
 
         // Check that amount is correct; must be not 0; if the user is normal (non admin) can be only negative transaction
-        if (transactionDTO.amount == null || transactionDTO.amount.abs().setScale(2) == BigDecimal("0.0").setScale(2) ) {
+        if (transactionDTO.amount == null || transactionDTO.amount.abs().setScale(2) == BigDecimal("0.0").setScale(2)) {
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "The transaction cannot be with amount 0 euro")
-        } else if (userInfoJWT!=null && !userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
-            throw ErrorResponse(HttpStatus.BAD_REQUEST, "Transaction cannot be with a positive amount (amount must be negative)")
-        }
-
-        return Mono.just(transactionDTO.senderWalletId.toString())
-            .flatMap(walletRepository::findById)
-            .doOnNext {
-                logger.info("CI PASSA DA QUI 0")
-                if (it == null) {
-                    logger.info("CI PASSA DA QUI A")
-                    throw AppRuntimeException("Sender wallet not found",HttpStatus.BAD_REQUEST,null)
-                }
-                if (it.amount < transactionDTO.amount.abs()) {
-                    logger.info("CI PASSA DA QUI B")
-                    if(trusted){
-                        reactiveProducerService.send(
-                            ProducerRecord("wallet.topic", null, order?.id.toString(), GsonUtils.gson.toJson(order),listOf(
-                                RecordHeader("type", "CREDIT_UNAVAILABLE".toByteArray())
-                            ))
-                        )
-                    }
-                    throw AppRuntimeException("Sender has not enough money to compute the transaction",HttpStatus.BAD_REQUEST,null)
-                }
-                if (!trusted && userInfoJWT!=null && it.customerUsername != userInfoJWT.username) {
-                    logger.info("CI PASSA DA QUI C $trusted $userInfoJWT ${it.customerUsername} ${userInfoJWT.username}")
-                    throw AppRuntimeException("Only the wallet owner can create transaction",HttpStatus.BAD_REQUEST,null)
-                }
-                it.amount -= transactionDTO.amount.abs()
-                logger.info("AMOUNT BANCA: ${it.amount}")
-            }
-            .flatMap(walletRepository::save)
-            .doOnNext {
-                logger.info("CI PASSA DA QUI 1")
-                if (it == null) {
-                    throw AppRuntimeException("Sender wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null)
-                }
-            }
-            .flatMap { senderWallet ->
-                logger.info("CI PASSA DA QUI 2")
-                walletRepository.findById(transactionDTO.receiverWalletId.toString())
-                    .doOnNext { receiverWallet ->
-                        if (receiverWallet == null) {
-                            throw AppRuntimeException("Receiver wallet not found",HttpStatus.BAD_REQUEST,null)
-                        }
-                        receiverWallet.amount += transactionDTO.amount.abs()
-                        val w = walletRepository.save(receiverWallet)
-                            .onErrorResume { throw AppRuntimeException("Receiver wallet update error",HttpStatus.INTERNAL_SERVER_ERROR,null) }
-                            .subscribe()
-                        logger.info("CI PASSA DA QUI 3 ${w}")
-                    }
-                    .flatMap {
-                        val t = transactionRepository.save(TransactionEntity(
-                            amount = transactionDTO.amount,
-                            time = Instant.now(),
-                            senderWalletId = senderWallet.id!!,
-                            receiverWalletId = it.id!!,
-                            reason = transactionDTO.reason
-                        ))
-                        logger.info("CI PASSA DA QUI 3 ${t}")
-                        t
-                    }
-                    .onErrorResume { e -> throw AppRuntimeException("Transaction not persisted",HttpStatus.INTERNAL_SERVER_ERROR,e) }
-            }
-            .onErrorResume { e -> throw AppRuntimeException(e.message,HttpStatus.BAD_REQUEST,e) }
-            .map {
-                it.toTransactionDTO()
-            }
-    }
-
-    /**
-     * Return all the transaction involved with a 'walletId' and in a given period (from 'start' to 'end')
-     * @param userInfoJWT : information about the user that make the request
-     * @param walletId : id of the wallet
-     * @param start : start date in millis
-     * @param end : end date in millis
-     * @return the list of transaction of that walletId and in that period
-     */
-    override suspend fun getTransactionsByPeriod(
-        userInfoJWT: UserInfoJWT,
-        walletId: ObjectId,
-        start: Instant,
-        end: Instant
-    ): Flux<TransactionEntity?> {
-
-        // Check if the walletId is valid
-        val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
-
-        // Check that the logged-in user is the owner of the wallet requested or is an admin (can see others wallet)
-        if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
-
-            return transactionRepository.findAllByTimeBetweenAndSenderWalletIdOrReceiverWalletId(
-                start,
-                end,
-                walletId,
-                walletId
+        } else if (userInfoJWT != null && !userInfoJWT.isAdmin() && transactionDTO.amount > BigDecimal("0.0")) {
+            throw ErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Transaction cannot be with a positive amount (amount must be negative)"
             )
         }
 
-        // User has no permission to see the transaction associate to that walletId
-        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see these transactions")
+        return Mono.just(transactionDTO.senderWalletId.toString())
+            .flatMap {
+                walletRepository.findById(transactionDTO.receiverWalletId.toString())
+            }
+            .switchIfEmpty {
+                logger.error("Receiver wallet with id ${transactionDTO.receiverWalletId} not found")
+                throw AppRuntimeException("Receiver wallet not found", HttpStatus.BAD_REQUEST, null)
+            }
+            .flatMap {
+                walletRepository.findById(transactionDTO.senderWalletId.toString())
+            }
+            .switchIfEmpty {
+                logger.error("Sender wallet with id ${transactionDTO.senderWalletId} not found")
+                throw AppRuntimeException("Sender wallet not found", HttpStatus.BAD_REQUEST, null)
+            }
+            .doOnNext { senderWalletEntity: WalletEntity ->
+                // We are sure that the senderWalletId and the receiverWalletId exist
+                logger.info("SenderWallet ${transactionDTO.senderWalletId} and $senderWalletEntity")
+
+                // Check if there are enough money inside the sender wallet
+                if (senderWalletEntity.amount < transactionDTO.amount.abs()) {
+                    logger.error("There are not enough money. Requested money: ${transactionDTO.amount.abs()} but the senderWallet has only ${senderWalletEntity.amount}")
+
+                    // Check if this is done inside the SAGA
+                    if (trusted) {
+                        reactiveProducerService.send(
+                            ProducerRecord(
+                                "wallet.topic", null, order?.id.toString(), GsonUtils.gson.toJson(order), listOf(
+                                    RecordHeader("type", "CREDIT_UNAVAILABLE".toByteArray())
+                                )
+                            )
+                        )
+                    }
+
+                    throw AppRuntimeException(
+                        "Sender has not enough money to compute the transaction",
+                        HttpStatus.BAD_REQUEST,
+                        null
+                    )
+                }
+
+                // Check if the logged-in user is the owner of the senderWallet
+                if (!trusted && userInfoJWT != null && senderWalletEntity.customerUsername != userInfoJWT.username) {
+                    logger.error("${userInfoJWT.username} is asking to take money from ${senderWalletEntity.id} that is own by ${senderWalletEntity.customerUsername}")
+                    throw AppRuntimeException(
+                        "Only the wallet owner can create transaction",
+                        HttpStatus.BAD_REQUEST,
+                        null
+                    )
+                }
+
+                // Reduce the amount of the senderWallet
+                senderWalletEntity.amount -= transactionDTO.amount.abs()
+
+                // This is the senderWallet, so we add the transaction inside the purchases list
+                senderWalletEntity.purchases.add(
+                    TransactionEntity(
+                        senderWalletId = transactionDTO.senderWalletId!!,
+                        receiverWalletId = transactionDTO.receiverWalletId!!,
+                        reason = transactionDTO.reason,
+                        amount = transactionDTO.amount
+                    )
+                )
+            }
+            .flatMap(walletRepository::save)
+            .flatMap {
+                walletRepository.findById(transactionDTO.receiverWalletId.toString())
+            }
+            .doOnNext { receiverWalletEntity: WalletEntity ->
+                logger.info("ReceiverWallet ${transactionDTO.receiverWalletId} and $receiverWalletEntity")
+
+                // Add the money to the receiverWallet
+                receiverWalletEntity.amount += transactionDTO.amount.abs()
+
+                // This is the receiverWallet, so we add the transaction inside the recharges list
+                receiverWalletEntity.recharges.add(
+                    TransactionEntity(
+                        senderWalletId = transactionDTO.senderWalletId!!,
+                        receiverWalletId = transactionDTO.receiverWalletId!!,
+                        reason = transactionDTO.reason,
+                        amount = transactionDTO.amount
+                    )
+                )
+            }
+            .flatMap(walletRepository::save)
+
+            .flatMap {
+                val t = TransactionDTO(
+                    amount = transactionDTO.amount,
+                    time = Instant.now(),
+                    senderWalletId = it.id!!,
+                    receiverWalletId = it.id!!,
+                    reason = transactionDTO.reason
+                )
+
+                mono { t }
+
+            }
     }
 
-    /**
-     * Get the transaction with a specific id and associated to that a walletId
-     * @param userInfoJWT : information about the user that make the request
-     * @param transactionId : id of the transaction
-     * @param walletId : id of the wallet associated to that transaction
-     * @return the transaction with that transactionId
-     */
-    override suspend fun getTransactionByIdAndWalletId(
-        userInfoJWT: UserInfoJWT,
-        transactionId: ObjectId,
-        walletId: ObjectId
-    ): TransactionDTO {
+        /**
+         * Return all the transaction involved with a 'walletId' and in a given period (from 'start' to 'end')
+         * @param userInfoJWT : information about the user that make the request
+         * @param walletId : id of the wallet
+         * @param start : start date in millis
+         * @param end : end date in millis
+         * @return the list of transaction of that walletId and in that period
+         */
+        override suspend fun getTransactionsByPeriod(
+            userInfoJWT: UserInfoJWT,
+            walletId: ObjectId,
+            start: Instant,
+            end: Instant
+        ): Flux<TransactionEntity?> {
 
-        // Check if the walletId and the transactionId are valid
-        val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
+            // Check if the walletId is valid
+            val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
+                ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
 
-        val transaction = transactionRepository.findById(transactionId.toString()).awaitSingleOrNull()
-            ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Transaction not found")
+            // Check that the logged-in user is the owner of the wallet requested or is an admin (can see others wallet)
+            if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
 
-
-        // Check that the logged-in user is the owner of the wallet requested or is an admin (can see others wallet)
-        if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
-
-            // Check that the requested transaction belongs to the wallet or is an admin
-            if (transaction.senderWalletId == wallet.id || transaction.receiverWalletId == wallet.id || userInfoJWT.isAdmin()) {
-                return transaction.toTransactionDTO()
+                return transactionRepository.findAllByTimeBetweenAndSenderWalletIdOrReceiverWalletId(
+                    start,
+                    end,
+                    walletId,
+                    walletId
+                )
             }
+
+            // User has no permission to see the transaction associate to that walletId
+            throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see these transactions")
         }
 
-        throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see this transaction")
+        /**
+         * Get the transaction with a specific id and associated to that a walletId
+         * @param userInfoJWT : information about the user that make the request
+         * @param transactionId : id of the transaction
+         * @param walletId : id of the wallet associated to that transaction
+         * @return the transaction with that transactionId
+         */
+        override suspend fun getTransactionByIdAndWalletId(
+            userInfoJWT: UserInfoJWT,
+            transactionId: ObjectId,
+            walletId: ObjectId
+        ): TransactionDTO {
 
+            // Check if the walletId and the transactionId are valid
+            val wallet = walletRepository.findById(walletId.toString()).awaitSingleOrNull()
+                ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Wallet not found")
+
+            val transaction = transactionRepository.findById(transactionId.toString()).awaitSingleOrNull()
+                ?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Transaction not found")
+
+
+            // Check that the logged-in user is the owner of the wallet requested or is an admin (can see others wallet)
+            if (userInfoJWT.username == wallet.customerUsername || userInfoJWT.isAdmin()) {
+
+                // Check that the requested transaction belongs to the wallet or is an admin
+                if (transaction.senderWalletId == wallet.id || transaction.receiverWalletId == wallet.id || userInfoJWT.isAdmin()) {
+                    return transaction.toTransactionDTO()
+                }
+            }
+
+            throw ErrorResponse(HttpStatus.UNAUTHORIZED, "You have no permission to see this transaction")
+
+        }
     }
-}
