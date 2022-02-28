@@ -27,7 +27,7 @@ class OutboxEventPublisher @Autowired constructor(
 		headers["type"] = type
 		val encodedHeaders = objectMapper.writeValueAsString(headers)
 		outboxEvent.headers = encodedHeaders
-//		throw RuntimeException("CIAONEEEEE")
+
 		return outboxEventRepository.save(outboxEvent)
 	}
 }

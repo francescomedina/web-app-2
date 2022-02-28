@@ -7,6 +7,7 @@ import it.polito.wa2.order.dto.OrderDTO
 import it.polito.wa2.order.dto.PartiallyOrderDTO
 import it.polito.wa2.order.services.OrderServiceImpl
 import org.bson.types.ObjectId
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -22,12 +23,11 @@ class OrderController(
     val orderServiceImpl: OrderServiceImpl,
     val jwtUtils: JwtValidateUtils
 ) {
-
+    private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
     /**
-     * GET /orders/{orderID}
-     * Retrieve the order identified by OrderID
-     * @param orderId : id of the order
-     * @return the requested order with the response status 200
+     * GET /orders
+     * Retrieve the list of all orders of the logged-in user
+     * @return all the orders of that user with the response status 200
      */
     @GetMapping("/")
     suspend fun getOrders(
@@ -96,7 +96,10 @@ class OrderController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            val createdOrder = orderDTO.let { orderServiceImpl.createOrder(userInfoJWT, it) }
+            val createdOrder = orderServiceImpl.createOrder(userInfoJWT, orderDTO).onErrorMap {
+                logger.error("ERROR FUNCTION ${object{}.javaClass.enclosingMethod.name}: \n$it")
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, it.message)
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder)
 
@@ -124,9 +127,9 @@ class OrderController(
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
             // If the user is not an admin, we will return an error
-//            if (!userInfoJWT.isAdmin()) {
-//                throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
-//            }
+            if (!userInfoJWT.isAdmin()) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied")
+            }
 
             // Ask the service to create a new order
             val updatedOrder = orderServiceImpl.updatePartiallyOrder(orderID,orderDTO)
@@ -142,6 +145,10 @@ class OrderController(
         }
     }
 
+    /**
+     * DELETE /orders/{orderID}
+     * @param orderId: the order to delete
+     */
     @DeleteMapping("/{orderId}")
     suspend fun deleteOrder(
         @PathVariable("orderId") orderId: ObjectId,
@@ -151,11 +158,11 @@ class OrderController(
             // Extract userInfo from JWT
             val userInfoJWT: UserInfoJWT = jwtUtils.getDetailsFromJwtToken(jwtToken)
 
-            // Ask the wallet information to the service. Throw an exception if the user can't access to such information
-            val requestedOrder = orderServiceImpl.deleteOrder(userInfoJWT, orderId)
+            // Ask the service to delete that orderID. Throw an exception if the user can't access to such information
+            val response = orderServiceImpl.deleteOrder(userInfoJWT, orderId)
 
             // Return a 200 with inside the order requested
-            return ResponseEntity.status(HttpStatus.OK).body(requestedOrder)
+            return ResponseEntity.status(HttpStatus.OK).body(response)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message

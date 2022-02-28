@@ -30,12 +30,8 @@ class OrderServiceImpl(
     val mailService: MailService,
 ) : OrderService {
 
-    private val logger = LoggerFactory.getLogger(OrderServiceImpl::class.java)
     private val adminEmail = "marco.lg1997@gmail.com"
 
-    /**
-     * TRANSACTIONAL: changes are committed if no exceptions are generated, rollback otherwise
-     */
     fun saveOrder(order: OrderEntity, toDelete: Boolean = false) : Mono<OrderDTO> {
         return Mono.just(order)
             .flatMap(orderRepository::save)
@@ -52,13 +48,15 @@ class OrderServiceImpl(
     }
 
     /**
-     * Create a order associated to a username
+     * Create an order associated to a buyer
      * @param userInfoJWT : information about the user that make the request
-     * @param username : username associated to that order
+     * @param orderDTO : information about the order
      * @return the order created
      */
     override fun createOrder(userInfoJWT: UserInfoJWT, orderDTO: OrderDTO): Mono<OrderDTO> {
+        // Check if the buyer is the same user logged-in
         if (userInfoJWT.username == orderDTO.buyer) {
+
             val order = OrderEntity(
                 buyer = userInfoJWT.username,
                 status = "ISSUING",
@@ -68,7 +66,8 @@ class OrderServiceImpl(
             )
             return saveOrder(order)
         }
-        throw ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person")
+
+       return Mono.error(ErrorResponse(HttpStatus.BAD_REQUEST, "You can't create order for another person"))
     }
 
     override fun deleteOrder(userInfoJWT: UserInfoJWT, orderId: ObjectId): Mono<Void> {

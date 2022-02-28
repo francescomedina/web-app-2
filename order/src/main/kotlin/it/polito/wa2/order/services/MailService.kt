@@ -1,11 +1,9 @@
 package it.polito.wa2.order.services
 
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 interface MailService {
     fun sendMessage(toMail: String, subject: String, mailBody: String)
