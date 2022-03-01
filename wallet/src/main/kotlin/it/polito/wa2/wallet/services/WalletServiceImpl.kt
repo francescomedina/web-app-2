@@ -136,6 +136,8 @@ class WalletServiceImpl(
 
                     // Check if this is done inside the SAGA
                     if (trusted) {
+                        logger.info("SAGA-WALLET: Sending CREDIT_UNAVAILABLE to wallet.topic")
+
                         reactiveProducerService.send(
                             ProducerRecord(
                                 "wallet.topic", null, order?.id.toString(), GsonUtils.gson.toJson(order), listOf(

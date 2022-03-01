@@ -21,7 +21,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.switchIfEmpty
-import kotlin.math.log
 
 @Service
 @Transactional
@@ -39,6 +38,8 @@ class OrderServiceImpl(
             .flatMap(orderRepository::save)
             .publishOn(Schedulers.boundedElastic())
             .doOnNext {
+                logger.info("SAGA-ORDER: Sending ${ if (toDelete) "ORDER_CANCELED" else "ORDER_CREATED"} inside order.topic")
+
                 eventPublisher.publish(
                     "order.topic",
                     it.id.toString(),

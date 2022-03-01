@@ -1,7 +1,6 @@
 package it.polito.wa2.order.repositories
 
 import it.polito.wa2.order.domain.OrderEntity
-import org.bson.types.ObjectId
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import reactor.core.publisher.Flux
 

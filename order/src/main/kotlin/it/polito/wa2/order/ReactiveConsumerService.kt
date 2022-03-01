@@ -58,51 +58,78 @@ class ReactiveConsumerService(
                     val order: OrderEntity
                     var status = when (type) {
                         "QUANTITY_DECREMENTED" -> {
+                            log.info("SAGA-ORDER: Reading QUANTITY_DECREMENTED from warehouse.topic")
+
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+
                             "ISSUED"
                         }
                         "QUANTITY_UNAVAILABLE_NOT_PURCHASED" -> {
-                            log.info("TYPE ${it.value()}")
+                            log.info("SAGA-ORDER: Reading QUANTITY_UNAVAILABLE_NOT_PURCHASED from warehouse.topic")
+
                             order = gson.fromJson(it.value(), OrderEntity::class.java)
-                            log.info("TYPE $order")
+
                             "FAILED-QUANTITY_UNAVAILABLE"
                         }
                         "REFUND_TRANSACTION_SUCCESS" -> {
+                            log.info("SAGA-ORDER: Reading REFUND_TRANSACTION_SUCCESS from warehouse.topic")
+
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+
                             "CANCELED"
                         }
                         "CREDIT_UNAVAILABLE" -> {
-//                            val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-//                            order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+                            log.info("SAGA-ORDER: Reading CREDIT_UNAVAILABLE from wallet.topic")
+
                             order = gson.fromJson(it.value(), OrderEntity::class.java)
+
                             "FAILED-CREDIT_UNAVAILABLE"
                         }
                         "TRANSACTION_ERROR" -> {
+                            log.info("SAGA-ORDER: Reading TRANSACTION_ERROR from wallet.topic")
+
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+
                             "FAILED-TRANSACTION_ERROR"
                         }
                         "REFUND_TRANSACTION_ERROR" -> {
+                            log.info("SAGA-ORDER: Reading REFUND_TRANSACTION_ERROR from wallet.topic")
+
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+
                             "FAILED-REFUND_TRANSACTION_ERROR"
                         }
                         else -> {
+                            log.error(
+                                "SAGA-ORDER: Unknown message type from warehouse.topic ${
+                                    String(
+                                        it.headers()
+                                            .reduce { _, header -> if (header.key() == "type") header else null }
+                                            ?.value() as ByteArray
+                                    )
+                                }"
+                            )
+
                             val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                             order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
+
                             ""
                         }
                     }
-                    log.info("TYPE $type")
+
                     orderRepository.findById(order.id.toString())
                         .onErrorResume { e ->
+                            log.error("Order/ReactiveConsumerService: Error during retrieving order details")
                             throw AppRuntimeException("Update order error", HttpStatus.INTERNAL_SERVER_ERROR, e)
                         }
                         .doOnNext { o ->
                             if (o == null) {
-                                throw AppRuntimeException("Order not found", HttpStatus.BAD_REQUEST, o)
+                                log.error("Order/ReactiveConsumerService: Error order with id ${order.id} not found")
+                                throw AppRuntimeException("Order not found", HttpStatus.BAD_REQUEST, null)
                             }
                             o.status = status
                             if (!order.delivery.isNullOrEmpty()) {
@@ -121,11 +148,11 @@ class ReactiveConsumerService(
                         }
                         .map { o -> o.toOrderDTO() }
                         .subscribe()
-                    log.info("successfully consumed {}={}", GenericMessage::class.java.simpleName, it.value())
+                    log.info("SAGA-ORDER: Successfully consumed {}={}", GenericMessage::class.java.simpleName, it.value())
                 }
             }
             .doOnError { throwable: Throwable ->
-                log.error("something bad happened while consuming : {}", throwable.message)
+                log.error("SAGA-ORDER: Something bad happened while consuming : {}", throwable.message)
             }
     }
 

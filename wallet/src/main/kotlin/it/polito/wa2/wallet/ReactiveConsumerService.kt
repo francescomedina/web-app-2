@@ -77,29 +77,46 @@ class ReactiveConsumerService(
                 )
             }
             .doOnNext {
-                when(String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)) {
+                when (String(it.headers().reduce { _, header -> if (header.key() == "type") header else null }
+                    ?.value() as ByteArray)) {
                     "QUANTITY_AVAILABLE" -> {
+                        log.info("SAGA-WALLET: Reading QUANTITY_AVAILABLE from warehouse.topic")
+
                         val order = gson.fromJson(it.value(), OrderEntity::class.java)
                         pay(order).subscribe()
                     }
                     "QUANTITY_UNAVAILABLE" -> {
+                        log.info("SAGA-WALLET: Reading QUANTITY_UNAVAILABLE from warehouse.topic")
+
                         val order = gson.fromJson(it.value(), OrderEntity::class.java)
-                        pay(order,true).subscribe()
+                        pay(order, true).subscribe()
                     }
                     "WAREHOUSE_PRODUCTS_RETURNED" -> {
+                        log.info("SAGA-WALLET: Reading WAREHOUSE_PRODUCTS_RETURNED from warehouse.topic")
+
                         val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                         val order = gson.fromJson(genericMessage.payload.toString(), OrderEntity::class.java)
-                        pay(order,true).subscribe()
+                        pay(order, true).subscribe()
+                    }
+                    else -> {
+                        log.error(
+                            "SAGA-WALLET: Unknown message type from warehouse.topic ${
+                                String(
+                                    it.headers().reduce { _, header -> if (header.key() == "type") header else null }
+                                        ?.value() as ByteArray
+                                )
+                            }"
+                        )
                     }
                 }
             }
             .doOnError { throwable: Throwable ->
-                log.error("something bad happened while consuming : {}", throwable.message)
+                log.error("SAGA-WALLET: ERROR Something bad happened while consuming : {}", throwable.message)
             }
     }
 
     @Transactional
-    fun pay(order: OrderEntity, isRefund: Boolean = false) : Mono<TransactionDTO> {
+    fun pay(order: OrderEntity, isRefund: Boolean = false): Mono<TransactionDTO> {
         return Mono.just(order)
             .flatMap { walletRepository.findByCustomerUsername(it.buyer!!) }
             .flatMap {
@@ -110,21 +127,26 @@ class ReactiveConsumerService(
                     null,
                     TransactionDTO(
                         amount = tot,
-                        senderWalletId = if(isRefund) bankId else it?.id,
-                        receiverWalletId = if(isRefund) it?.id else bankId,
-                        reason = if(isRefund) "Order Refund" else "Order Payment"
+                        senderWalletId = if (isRefund) bankId else it?.id,
+                        receiverWalletId = if (isRefund) it?.id else bankId,
+                        reason = if (isRefund) "Order Refund for order id ${order.id}" else "Order Payment for order id ${order.id}"
                     ), true,
                     order
                 )
             }
             .doOnError {
+                log.error("SAGA-WALLET: Sending ${if (isRefund) "REFUND_TRANSACTION_ERROR" else "TRANSACTION_ERROR"} to order.topic")
+
                 eventPublisher.publish(
                     "order.topic",
                     order.id.toString(),
                     gson.toJson(order),
-                    if(isRefund) "REFUND_TRANSACTION_ERROR" else "TRANSACTION_ERROR"
+                    if (isRefund) "REFUND_TRANSACTION_ERROR" else "TRANSACTION_ERROR"
                 ).subscribe()
-                if(isRefund){
+
+                if (isRefund) {
+                    log.error("SAGA-WALLET: Sending REFUND_TRANSACTION_ERROR to wallet.topic")
+
                     eventPublisher.publish(
                         "wallet.topic",
                         order.id.toString(),
@@ -134,16 +156,18 @@ class ReactiveConsumerService(
                 }
             }
             .doOnNext {
+                log.info("SAGA-WALLET: Sending ${if (isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"} to wallet.topic")
+
                 eventPublisher.publish(
                     "wallet.topic",
                     order.id.toString(),
                     gson.toJson(order),
-                    if(isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"
-                ).subscribe{
-                    log.info("successfully consumed ${if(isRefund) "REFUND" else "PAYMENT"} {} ", it)
+                    if (isRefund) "REFUND_TRANSACTION_SUCCESS" else "TRANSACTION_SUCCESS"
+                ).subscribe {
+                    log.info("SAGA-WALLET: Successfully consumed ${if (isRefund) "REFUND" else "PAYMENT"} {} ", it)
                 }
             }
-            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.INTERNAL_SERVER_ERROR,it)) }
+            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.BAD_REQUEST, it)) }
     }
 
     override fun run(vararg args: String) {

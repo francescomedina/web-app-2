@@ -70,9 +70,9 @@ class ReactiveConsumerService(
     fun checkAvailability(order: OrderEntity): Mono<MutableList<ProductAvailabilityEntity?>> {
         return Flux.fromIterable(order.products)
             .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
-            .switchIfEmpty(Mono.error(RuntimeException("Can not find the product")))
+            .switchIfEmpty(Mono.error(RuntimeException("Cannot find the product")))
             .onErrorResume {
-                log.info("CIAONE 1")
+                log.error("Error during check availability; reason: ${it.message}")
                 reactiveProducerService.send(
                     ProducerRecord("warehouse.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE_NOT_PURCHASED".toByteArray())))
                 )
@@ -80,6 +80,8 @@ class ReactiveConsumerService(
             }
             .collectList()
             .doOnNext {
+                log.info("SAGA-WAREHOUSE: Sending QUANTITY_AVAILABLE to warehouse.topic ")
+
                 reactiveProducerService.send(
                     ProducerRecord(
                         "warehouse.topic",
@@ -256,18 +258,55 @@ class ReactiveConsumerService(
                 )
             }
             .doOnNext {
-                val type = String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)
-                val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
-                when (type){
-                    "ORDER_CREATED" -> checkProductAvailability(order)
-                    "ORDER_CANCELED" -> incrementQuantity(order).subscribe()
-                    "TRANSACTION_SUCCESS" -> decrementQuantity(order).subscribe()
-                    "REFUND_TRANSACTION_ERROR" -> incrementQuantity(order, true).subscribe()
+                //val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                //val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+                when (String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)){
+                    "ORDER_CREATED" -> {
+                        log.info("SAGA-WAREHOUSE: Reading ORDER_CREATED from order.topic")
+
+                        val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+
+                        checkProductAvailability(order)
+                    }
+                    "ORDER_CANCELED" -> {
+                        log.info("SAGA-WAREHOUSE: Reading ORDER_CANCELED from order.topic")
+
+                        val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+
+                        incrementQuantity(order).subscribe()
+                    }
+                    "TRANSACTION_SUCCESS" -> {
+                        log.info("SAGA-WAREHOUSE: Reading TRANSACTION_SUCCESS from wallet.topic")
+
+                        val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+
+                        decrementQuantity(order).subscribe()
+                    }
+                    "REFUND_TRANSACTION_ERROR" -> {
+                        log.info("SAGA-WAREHOUSE: Reading REFUND_TRANSACTION_ERROR from wallet.topic")
+
+                        val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
+                        val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
+
+                        incrementQuantity(order, true).subscribe()
+                    }
+                    else -> {
+                        log.error(
+                            "SAGA-WAREHOUSE: Unknown message type from order.topic ${
+                                String(
+                                    it.headers().reduce { _, header -> if (header.key() == "type") header else null }
+                                        ?.value() as ByteArray
+                                )
+                            }"
+                        )
+                    }
                 }
             }
             .doOnError { throwable: Throwable ->
-                log.error("something bad happened while consuming : {}", throwable.message)
+                log.error("SAGA-WAREHOUSE: ERROR Something bad happened while consuming : {}", throwable.message)
             }
     }
 
@@ -308,6 +347,9 @@ class ReactiveConsumerService(
                         ))
                     }
                     order.delivery = tmp.toList()
+
+                    log.info("SAGA-WAREHOUSE: Sending QUANTITY_DECREMENTED to warehouse.topic")
+
                     eventPublisher.publish(
                         "warehouse.topic",
                         order.id.toString(),
@@ -318,6 +360,8 @@ class ReactiveConsumerService(
                     }
                 }
                 .doOnError {
+                    log.info("SAGA-WAREHOUSE: Sending QUANTITY_UNAVAILABLE to wallet.topic")
+
                     eventPublisher.publish(
                         "wallet.topic",
                         order.id.toString(),
@@ -346,6 +390,8 @@ class ReactiveConsumerService(
             .doOnError { throw RuntimeException("Error on productAvailability") }
             .doOnComplete {
                 if(!dueToError){
+                    log.info("SAGA-WAREHOUSE: Sending WAREHOUSE_PRODUCTS_RETURNED to warehouse.topic")
+
                     eventPublisher.publish(
                         "warehouse.topic",
                         order.id.toString(),
@@ -357,6 +403,8 @@ class ReactiveConsumerService(
                 }
             }
             .doOnError {
+                log.info("SAGA-WAREHOUSE: Sending WAREHOUSE_PRODUCTS_RETURNING_ERROR to warehouse.topic")
+
                 eventPublisher.publish(
                     "warehouse.topic",
                     order.id.toString(),
