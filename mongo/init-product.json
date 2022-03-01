@@ -4,17 +4,30 @@
     "name": "prodotto per la casa",
     "category": "HOME",
     "description": "Descrizione prodotto",
-    "pictureURL": "asd",
-    "price": 5.3,
-    "averageRating": 0.2
+    "pictureURL": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBLro5YU8LKmhA9b-xodSXEXB7GFeat1pDeEz-gATim3ZHo8hFr17zMU7tpHZRIUqRW1M&usqp=CAU",
+    "price": "5.30",
+    "rating": [
+      {
+        "title": "Recensione 1",
+        "body": "Il prodotto è magnifico",
+        "stars": 2
+      },
+      {
+        "title": "Recensione 2",
+        "body": "Il prodotto è buono",
+        "stars": 2
+      }
+    ],
+    "averageRating": 2
   },
   {
     "_id": {"$oid": "61be1836781a1505f296da23"},
     "name": "prodotto per il bagno",
     "category": "HOME",
     "description": "Descrizione prodotto 2",
-    "pictureURL": "asd",
-    "price": 5.3,
-    "averageRating": 0.2
+    "pictureURL": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBLro5YU8LKmhA9b-xodSXEXB7GFeat1pDeEz-gATim3ZHo8hFr17zMU7tpHZRIUqRW1M&usqp=CAU",
+    "price": "5.30",
+    "rating": [],
+    "averageRating": 0
   }
 ]

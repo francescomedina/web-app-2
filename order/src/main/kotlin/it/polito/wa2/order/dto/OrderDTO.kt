@@ -10,6 +10,7 @@ data class PartiallyOrderDTO(
     var buyer: String? = null,
     var products: List<ProductDTO>? = null,
     var delivery: List<DeliveryDTO>? = null,
+    var shippingAddress: String? = null
 )
 
 data class OrderDTO(
@@ -21,6 +22,8 @@ data class OrderDTO(
 
     var products: List<ProductDTO>? = emptyList(),
     var delivery: List<DeliveryDTO>? = emptyList(),
+    @field:NotBlank(message = "Shipping Address is required")
+    var shippingAddress: String? = ""
 )
 
 fun OrderEntity.toOrderDTO(): OrderDTO {
@@ -29,6 +32,7 @@ fun OrderEntity.toOrderDTO(): OrderDTO {
         status = status,
         buyer = buyer,
         products = products?.map { it.toProductDTO() }?.toList(),
-        delivery = delivery?.map { it.toDeliveryDTO() }?.toList()
+        delivery = delivery?.map { it.toDeliveryDTO() }?.toList(),
+        shippingAddress = shippingAddress
     )
 }

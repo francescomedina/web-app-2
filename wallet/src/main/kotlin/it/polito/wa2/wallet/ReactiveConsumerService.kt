@@ -50,6 +50,8 @@ data class OrderEntity(
     var products: List<ProductEntity> = emptyList(),
     @JsonProperty("delivery")
     var delivery: List<DeliveryEntity>? = emptyList(),
+    @JsonProperty("shippingAddress")
+    var shippingAddress: String? = null,
 )
 
 @Service
@@ -167,7 +169,7 @@ class ReactiveConsumerService(
                     log.info("SAGA-WALLET: Successfully consumed ${if (isRefund) "REFUND" else "PAYMENT"} {} ", it)
                 }
             }
-            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.BAD_REQUEST, it)) }
+//            .onErrorResume { Mono.error(AppRuntimeException(it.message, HttpStatus.BAD_REQUEST, it)) }
     }
 
     override fun run(vararg args: String) {

@@ -19,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.util.Assert
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
 import java.math.BigDecimal
-import java.util.*
 
 data class ProductEntity(
     @JsonProperty("id")
@@ -52,8 +50,9 @@ data class OrderEntity(
     var products: List<ProductEntity> = emptyList(),
     @JsonProperty("delivery")
     var delivery: List<DeliveryEntity>? = emptyList(),
+    @JsonProperty("shippingAddress")
+    var shippingAddress: String? = null,
 )
-
 
 @Service
 class ReactiveConsumerService(
@@ -64,7 +63,7 @@ class ReactiveConsumerService(
     val mailService: MailService,
 ) : CommandLineRunner {
 
-    private val adminEmail = "pacimedina@gmail.com"
+    private val adminEmail = "marco.lg1997@gmail.com"
     private val log = LoggerFactory.getLogger(ReactiveConsumerService::class.java)
 
     fun checkAvailability(order: OrderEntity): Mono<MutableList<ProductAvailabilityEntity?>> {
@@ -72,11 +71,11 @@ class ReactiveConsumerService(
             .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
             .switchIfEmpty(Mono.error(RuntimeException("Cannot find the product")))
             .onErrorResume {
-                log.error("Error during check availability; reason: ${it.message}")
+                log.error("SAGA-WAREHOUSE: Sending QUANTITY_UNAVAILABLE_NOT_PURCHASED to warehouse topic. Error during check availability; reason: ${it.message}")
                 reactiveProducerService.send(
                     ProducerRecord("warehouse.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE_NOT_PURCHASED".toByteArray())))
                 )
-                throw RuntimeException("CIAONE 1")
+                throw RuntimeException("Product not found or quantity unavailable")
             }
             .collectList()
             .doOnNext {
@@ -94,156 +93,6 @@ class ReactiveConsumerService(
             }
     }
 
-    @Transactional
-    fun checkProductAvailability(order: OrderEntity) {
-        try {
-            checkAvailability(order).subscribe()
-        }catch (r: RuntimeException){
-            throw RuntimeException("ALTROOOOO")
-        }
-//        return reactiveProducerService.send(
-//            ProducerRecord(
-//                "warehouse.topic",
-//                null,
-//                order.id.toString(),
-//                gson.toJson(order),
-//                listOf(RecordHeader("type", "QUANTITY_AVAILABLE".toByteArray()))
-//            )
-//        )
-//        Mono.just(order)
-//            .flatMap {
-//                Flux.fromIterable(order.products)
-//                    .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
-//                    .switchIfEmpty(Mono.error(RuntimeException("Can not find the product")))
-//                    .onErrorResume {
-//                        log.info("CIAONE 1")
-//                        reactiveProducerService.send(
-//                            ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-//                        )
-//                        throw RuntimeException("CIAONE 1")
-//                    }
-//                    .flatMap { Mono.just(order) }
-//                Mono.just(order)
-//            }
-//            .onErrorResume {
-//                log.info("CIAONE X")
-//                reactiveProducerService.send(
-//                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-//                )
-//                throw RuntimeException("CIAONE X ")
-//            }
-//            .flatMap {
-//                Flux.fromIterable(order.products)
-//                    .flatMap { productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity) }
-//                    .switchIfEmpty(Mono.error(RuntimeException("Can not find item.")))
-//                    .onErrorResume {
-//                        log.info("CIAONE 2")
-//                        reactiveProducerService.send(
-//                            ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-//                        )
-//                        throw RuntimeException("CIAONE 2")
-//                    }
-//                Mono.just(order)
-//            }
-//            .onErrorResume {
-//                log.info("CIAONE 3")
-//                reactiveProducerService.send(
-//                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-//                )
-//                throw RuntimeException("CIAONE 3 ")
-//            }
-//            .subscribe()
-//        return reactiveProducerService.send(
-//            ProducerRecord(
-//                "warehouse.topic",
-//                null,
-//                order.id.toString(),
-//                gson.toJson(order),
-//                listOf(RecordHeader("type", "QUANTITY_AVAILABLE".toByteArray()))
-//            )
-//        )
-//            .doOnNext {
-//                checkAvailability(order).subscribe()
-//            }
-//            .onErrorResume {
-//                log.info("CIAONE 2")
-//                reactiveProducerService.send(
-//                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-//                )
-//                throw RuntimeException("CIAONE 2")
-//            }
-
-//            checkExistence(order)
-//                .onErrorResume {
-//                    log.info("CIAONE")
-//                    throw RuntimeException("CIAONE")
-//                }
-//            checkAvailability(order)
-//                .onErrorResume {
-//                    log.info("CIAONE 2")
-//                    throw RuntimeException("CIAONE 2")
-//                }.subscribe()
-//            reactiveProducerService.send(
-//                ProducerRecord(
-//                    "warehouse.topic",
-//                    null,
-//                    order.id.toString(),
-//                    gson.toJson(order),
-//                    listOf(RecordHeader("type", "QUANTITY_AVAILABLE".toByteArray()))
-//                )
-//            )
-
-/*        return Mono.just(order.products)
-            .flatMapMany { products ->
-                Flux.fromIterable(products)
-                    .doOnNext {
-                        productAvailabilityRepository.findOneByProductId(it.id)
-                            .doOnNext { p -> Assert.isTrue(p!=null,"Product not found") }
-                            .doOnError {
-                                reactiveProducerService.send(
-                                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-                                )
-                                throw RuntimeException(it)
-                            }
-                            .onErrorResume {
-                                reactiveProducerService.send(
-                                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-                                )
-                                throw RuntimeException(it)
-                            }
-                            .subscribe()
-                    }
-                    .doOnNext {
-                        productAvailabilityRepository.findOneByProductIdAndQuantityGreaterThanEqual(it.id,it.quantity)
-                            .doOnNext { p -> Assert.isTrue(p!=null,"Product no more available") }
-                            .subscribe()
-                    }
-                    .doOnError {
-                        reactiveProducerService.send(
-                            ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-                        )
-                        throw RuntimeException(it)
-                    }
-            }
-            .onErrorResume {
-                reactiveProducerService.send(
-                    ProducerRecord("order.topic", null, order.id.toString(), gson.toJson(order),listOf(RecordHeader("type", "QUANTITY_UNAVAILABLE".toByteArray())))
-                )
-                throw RuntimeException(it)
-            }
-            .doOnComplete {
-                reactiveProducerService.send(
-                    ProducerRecord(
-                        "warehouse.topic",
-                        null,
-                        order.id.toString(),
-                        gson.toJson(order),
-                        listOf(RecordHeader("type", "QUANTITY_AVAILABLE".toByteArray()))
-                    )
-                )
-            }*/
-    }
-
     private fun warehouseConsumer(): Flux<ConsumerRecord<String, String>> {
         return reactiveKafkaConsumerTemplate
             .receiveAutoAck()
@@ -258,8 +107,6 @@ class ReactiveConsumerService(
                 )
             }
             .doOnNext {
-                //val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
-                //val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
                 when (String(it.headers().reduce { _, header -> if(header.key() == "type") header else null}?.value() as ByteArray)){
                     "ORDER_CREATED" -> {
                         log.info("SAGA-WAREHOUSE: Reading ORDER_CREATED from order.topic")
@@ -267,7 +114,7 @@ class ReactiveConsumerService(
                         val genericMessage = gson.fromJson(it.value(), GenericMessage::class.java)
                         val order = gson.fromJson(genericMessage.payload.toString(),OrderEntity::class.java)
 
-                        checkProductAvailability(order)
+                        checkAvailability(order).subscribe()
                     }
                     "ORDER_CANCELED" -> {
                         log.info("SAGA-WAREHOUSE: Reading ORDER_CANCELED from order.topic")
@@ -324,6 +171,7 @@ class ReactiveConsumerService(
                             }else{
                                 deliveryMap[p.warehouseId]?.add(it)
                             }
+//                            throw RuntimeException("PRODUCT UNAVAILABLE") // To test the all-or-nothing behavior, rollback the payment if product is no more available
                         }
                 }
                 .flatMap { productAvailabilityRepository.save(it!!) }
@@ -337,11 +185,11 @@ class ReactiveConsumerService(
                     }
                 }
                 .doOnError { throw RuntimeException("Error on productAvailability") }
-                .doOnComplete { // Si applica alla fine di tutti i flussi, in questo caso dopo aver iterato tutti i prodotti
+                .doOnComplete {
                     val tmp = mutableListOf<DeliveryEntity>()
                     deliveryMap.forEach {
                         tmp.add(DeliveryEntity(
-                            "Via Alessandro Volta 123",
+                            order.shippingAddress,
                             it.key,
                             it.value.toList()
                         ))

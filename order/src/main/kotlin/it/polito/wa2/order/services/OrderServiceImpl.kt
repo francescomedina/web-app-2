@@ -66,7 +66,8 @@ class OrderServiceImpl(
                 status = "ISSUING",
                 products = orderDTO.products?.map {
                     ProductEntity(it.id, it.quantity, it.price)
-                }?.toList()
+                }?.toList(),
+                shippingAddress = orderDTO.shippingAddress
             )
             return saveOrder(order)
         }
@@ -141,8 +142,6 @@ class OrderServiceImpl(
             orderEntity.products!!
         }
 
-        logger.info("new prods $prods")
-
         // If the user specify the delivery we will update
         val delivery: List<DeliveryEntity> = if (orderDTO.delivery!=null) {
             orderDTO.delivery!!.map {
@@ -156,26 +155,19 @@ class OrderServiceImpl(
             orderEntity.delivery!!
         }
 
-        logger.info("new delivery $delivery")
-
-        logger.info("ORDERDTO.STATUS ${orderDTO.status} ORDERENTITY ${orderEntity.status} ORDER DTO $orderDTO")
-
         val newOrder = OrderEntity(
             id = orderEntity.id,
             buyer = orderDTO.buyer ?: orderEntity.buyer,
             status = orderDTO.status ?: orderEntity.status,
             products = prods,
-            delivery = delivery
+            delivery = delivery,
+            shippingAddress = orderDTO.shippingAddress ?: orderEntity.shippingAddress
         )
-
-        logger.info("new order $newOrder")
 
         val savedNewOrder = orderRepository.save(newOrder).onErrorMap { error ->
             logger.error("Error during saving: $error")
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Error during saving: $error")
         }.awaitSingle()
-
-        logger.info("DOPO SALVAREEEEE $savedNewOrder")
 
         // Send email to the buyer only if the order status changes
         if (orderEntity.status != newOrder.status) {
@@ -187,8 +179,6 @@ class OrderServiceImpl(
                 )
             }
         }
-
-        logger.info("DOPO EMAIL")
 
         return savedNewOrder.toOrderDTO()
     }
