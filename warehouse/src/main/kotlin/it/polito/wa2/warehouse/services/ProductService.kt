@@ -1,6 +1,5 @@
 package it.polito.wa2.warehouse.services
 
-import it.polito.wa2.warehouse.domain.Category
 import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.RatingDTO
 import it.polito.wa2.warehouse.dto.UpdateProductDTO

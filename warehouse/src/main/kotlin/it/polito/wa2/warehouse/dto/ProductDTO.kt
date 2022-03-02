@@ -1,6 +1,5 @@
 package it.polito.wa2.warehouse.dto
 
-import it.polito.wa2.warehouse.domain.Category
 import it.polito.wa2.warehouse.domain.ProductEntity
 import it.polito.wa2.warehouse.domain.RatingEntity
 import org.bson.types.ObjectId

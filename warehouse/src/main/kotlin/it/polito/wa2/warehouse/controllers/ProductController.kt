@@ -91,10 +91,10 @@ class ProductController(
     ): ResponseEntity<Flux<ProductAvailabilityDTO>> {
         try {
             // Ask the picture URL of a product with that productID to the service
-            val productAvailabilityEntitty = warehouseServiceImpl.getProductAvailabilityByProductId(ObjectId(productID))
+            val productAvailabilityEntity = warehouseServiceImpl.getProductAvailabilityByProductId(ObjectId(productID))
 
             // Return a 200 with inside the list of warehouseIDs
-            return ResponseEntity.status(HttpStatus.OK).body(productAvailabilityEntitty)
+            return ResponseEntity.status(HttpStatus.OK).body(productAvailabilityEntity)
 
         } catch (error: ErrorResponse) {
             // There was an error. Return an error message
@@ -249,7 +249,7 @@ class ProductController(
     @GetMapping("/{productID}/picture")
     suspend fun getPictureById(
         @PathVariable productID: String,
-    ): ResponseEntity<String>{
+    ): ResponseEntity<String> {
         try {
             // Ask the picture URL of a product with that productID to the service
             val pictureURL: String = productServiceImpl.getPictureById(productID)

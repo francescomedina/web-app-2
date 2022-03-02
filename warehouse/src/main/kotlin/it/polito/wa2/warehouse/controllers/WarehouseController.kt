@@ -3,20 +3,16 @@ package it.polito.wa2.warehouse.controllers
 import it.polito.wa2.api.composite.catalog.UserInfoJWT
 import it.polito.wa2.api.exceptions.ErrorResponse
 import it.polito.wa2.util.jwt.JwtValidateUtils
-import it.polito.wa2.warehouse.domain.WarehouseEntity
 import it.polito.wa2.warehouse.dto.ProductAvailabilityDTO
-import it.polito.wa2.warehouse.dto.ProductDTO
 import it.polito.wa2.warehouse.dto.WarehouseDTO
 import it.polito.wa2.warehouse.services.PartiallyProductAvailabilityDTO
 import it.polito.wa2.warehouse.services.PartiallyWarehouseDTO
-import it.polito.wa2.warehouse.services.ProductServiceImpl
 import it.polito.wa2.warehouse.services.WarehouseServiceImpl
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import javax.validation.Valid
 
@@ -208,6 +204,7 @@ class WarehouseController(
     /**
      * POST /warehouses/{warehouseID}/products
      * Add a product with a given initial quantity to the warehouse
+     * @param warehouseID:
      * @param productAvailabilityDTO:
      * @return the new product with quantity
      */
@@ -241,7 +238,8 @@ class WarehouseController(
     /**
      * PATCH /products/{productID}
      * Updates quantity of a product. Negative if order is issued or positive if a rollback operation
-     * @param productsID: id of the product to update the quantity
+     * @param warehouseID: id of the warehouse
+     * @param productID: id of the product to update the quantity
      * @param productAvailabilityDTO: quantity to update
      * @return the new product quantity in the warehouse
      */

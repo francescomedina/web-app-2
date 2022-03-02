@@ -1,12 +1,9 @@
 package it.polito.wa2.wallet.domain
 
 import org.bson.types.ObjectId
-import org.springframework.data.annotation.Id
-import org.springframework.data.mongodb.core.mapping.Document
 import java.math.BigDecimal
 import java.time.Instant
 import javax.validation.constraints.Min
-import javax.validation.constraints.NotBlank
 
 data class TransactionEntity(
    @Min(0) //Amount greater or equal to 0

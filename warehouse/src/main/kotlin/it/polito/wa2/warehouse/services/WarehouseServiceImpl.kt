@@ -64,7 +64,7 @@ class WarehouseServiceImpl (
             region = warehouseDTO.region
         )).map {
             it.toWarehouseDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Warehouse not updated")
+        }
     }
 
     override suspend fun updatePartiallyWarehouse(warehouseID: String, warehouseDTO: PartiallyWarehouseDTO): Mono<WarehouseDTO>{
@@ -103,7 +103,7 @@ class WarehouseServiceImpl (
             warehouseId = productAvailabilityDTO.warehouseId!!
         )).map {
             it.toProductAvailabilityDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "ProductAvailability not created")
+        }
     }
 
     override suspend fun updateProductAvailability(warehouseID: String,productID: String, productAvailabilityDTO: PartiallyProductAvailabilityDTO): Mono<ProductAvailabilityDTO> {
@@ -117,6 +117,6 @@ class WarehouseServiceImpl (
             warehouseId = productAvailabilityDTO.warehouseId ?: pa.warehouseId
         )).map {
             it.toProductAvailabilityDTO()
-        }?: throw ErrorResponse(HttpStatus.NOT_FOUND, "Product availability not patched")
+        }
     }
 }

@@ -4,7 +4,6 @@ import it.polito.wa2.wallet.domain.TransactionEntity
 import org.bson.types.ObjectId
 import java.math.BigDecimal
 import java.time.Instant
-import javax.validation.constraints.DecimalMin
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 

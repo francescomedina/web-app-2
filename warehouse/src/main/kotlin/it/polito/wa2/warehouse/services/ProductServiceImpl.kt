@@ -58,7 +58,7 @@ class ProductServiceImpl(
             throw ErrorResponse(HttpStatus.BAD_REQUEST, "Fields missing: name or price")
         }
 
-        val newProduct: ProductEntity = ProductEntity(
+        val newProduct = ProductEntity(
             name = productDTO.name, description = productDTO.description,
             pictureURL = productDTO.pictureURL, category = categoryEnum, price = productDTO.price
         )
