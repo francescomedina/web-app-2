@@ -2,13 +2,13 @@
   {
     "productId": {"$oid": "61be182e1da7d84f657ba26e"},
     "warehouseId": {"$oid": "61be16bd0fad93e4fff50774"},
-    "quantity": 9999,
+    "quantity": 30,
     "min_quantity": 1
   },
   {
     "productId": {"$oid": "61be1836781a1505f296da23"},
     "warehouseId": {"$oid": "61be16fed35a3f8fa7d66186"},
-    "quantity": 9999,
+    "quantity": 30,
     "min_quantity": 1
   }
 ]

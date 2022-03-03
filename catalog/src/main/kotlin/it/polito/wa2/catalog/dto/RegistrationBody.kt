@@ -5,7 +5,8 @@ import javax.validation.constraints.NotBlank
 
 data class RegistrationBody(
     @field:Email(message = "Email is not valid")
-    val email: String,
+    @field:NotBlank(message = "Missing required body parameter: email")
+    val email: String = "",
 
     val name: String = "",
     val surname: String = "",
